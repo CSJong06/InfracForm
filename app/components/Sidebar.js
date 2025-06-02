@@ -1,10 +1,10 @@
 "use client";
 import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const navLinks = [
-  { name: 'History', icon: ClockIcon, href: '/' },
+  { name: 'History', icon: ClockIcon, href: '/dashboard' },
   { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
   { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
   { name: 'Users', icon: UserGroupIcon, href: '/users' },
@@ -12,6 +12,13 @@ const navLinks = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = (e) => {
+    e.preventDefault();
+    router.push('/');
+  };
+
   return (
     <aside className="w-56 bg-white/90 border-r flex flex-col py-8 px-4 gap-2 shadow-lg z-10">
       <div className="mb-8 flex items-center gap-2 px-2">
@@ -39,13 +46,13 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <a
-        href="#"
+      <button
+        onClick={handleLogout}
         className="mt-auto flex items-center gap-3 text-gray-400 py-2 px-3 rounded-lg hover:bg-gray-100 hover:text-red-500 transition-colors font-medium"
       >
         <ArrowLeftOnRectangleIcon className="w-5 h-5" />
         Logout
-      </a>
+      </button>
     </aside>
   );
 } 

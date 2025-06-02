@@ -1,24 +1,17 @@
-"use client";
-import { useState } from 'react';
-import Sidebar from './components/Sidebar';
-import RecentInfractions from './components/RecentInfractions';
-import InfractionHistory from './components/InfractionHistory';
-import FloatingActionButton from './components/FloatingActionButton';
-import ReportFormModal from './components/ReportFormModal';
+import LoginForm from './components/LoginForm';
+import Banner from './components/Banner';
+import Footer from './components/Footer';
 
-export default function Dashboard() {
-  const [modalOpen, setModalOpen] = useState(false);
+export default function Home() {
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-slate-100 to-blue-50 font-sans">
-      <Sidebar />
-      <main className="flex-1 flex flex-col p-6 sm:p-10 gap-10 relative overflow-x-auto">
-        <RecentInfractions />
-        <InfractionHistory />
-        <div onClick={() => setModalOpen(true)}>
-          <FloatingActionButton />
+    <div className="min-h-screen relative flex flex-col bg-gradient-to-br from-slate-100 to-blue-50">
+      <Banner />
+      <div className="flex-1 flex items-center justify-center p-4 mt-32 mb-24">
+        <div className="w-full max-w-md bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+          <LoginForm />
         </div>
-        <ReportFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
-      </main>
+      </div>
+      <Footer />
     </div>
   );
 }
