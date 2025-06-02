@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import InfractionType from '@/lib/models/InfractionType';
+import connectDB from '../../../lib/mongodb.js';
+import InfractionType from '../../../lib/models/InfractionType.js';
 
 // GET all active infraction types
 export async function GET() {
   try {
     await connectDB();
-    const infractionTypes = await InfractionType.find({ isActive: true })
-      .sort({ order: 1, displayName: 1 });
+    const infractionTypes = await InfractionType.find({ isActive: true }).sort({ order: 1 });
     return NextResponse.json(infractionTypes);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch infraction types' },
+      { status: 500 }
+    );
   }
 }
 

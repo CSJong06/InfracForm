@@ -1,25 +1,67 @@
-import { ClockIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
+'use client';
+
+import { useReports } from '@/lib/hooks/useReports';
+import { format } from 'date-fns';
+
+const formatValue = (value) => {
+  return value
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 export default function RecentInfractions() {
-  return (
-    <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Recent Infractions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-tr from-blue-100 to-blue-50 rounded-xl shadow flex items-center justify-between p-5 hover:shadow-lg transition">
-          <div>
-            <div className="text-lg font-semibold text-blue-800">Tardy</div>
-            <div className="text-gray-500 text-sm">John Doe - 5 mins late</div>
-          </div>
-          <ClockIcon className="w-8 h-8 text-blue-400" />
-        </div>
-        <div className="bg-gradient-to-tr from-pink-100 to-pink-50 rounded-xl shadow flex items-center justify-between p-5 hover:shadow-lg transition">
-          <div>
-            <div className="text-lg font-semibold text-pink-800">Dress Code</div>
-            <div className="text-gray-500 text-sm">Jane Smith - Hoodie</div>
-          </div>
-          <ExclamationCircleIcon className="w-8 h-8 text-pink-400" />
+  const { reports, loading, error } = useReports('UNRESOLVED');
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900">Recent Infractions</h2>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
         </div>
       </div>
-    </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900">Recent Infractions</h2>
+        <div className="text-red-600">Error loading infractions: {error}</div>
+      </div>
+    );
+  }
+
+  const infractions = reports.filter(report => report.interaction === 'INFRACTION');
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold mb-4 text-gray-900">Recent Infractions</h2>
+      {infractions.length === 0 ? (
+        <p className="text-gray-700">No recent infractions</p>
+      ) : (
+        <div className="space-y-4">
+          {infractions.map((report) => (
+            <div key={report._id} className="border-b pb-4 last:border-b-0">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <span className="font-medium text-gray-900">
+                    {report.studentName || `Student #${report.studentNumber}`}
+                  </span>
+                  <span className="text-gray-600 text-sm ml-2">
+                    {format(new Date(report.entryTimestamp), 'MMM d, yyyy h:mm a')}
+                  </span>
+                </div>
+                <span className="text-sm text-red-700 font-medium">{formatValue(report.infraction)}</span>
+              </div>
+              <p className="text-gray-800 text-sm">{report.notes}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 } 

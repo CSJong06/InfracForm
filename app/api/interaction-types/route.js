@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import InteractionType from '@/lib/models/InteractionType';
+import connectDB from '../../../lib/mongodb.js';
+import InteractionType from '../../../lib/models/InteractionType.js';
 
 // GET all active interaction types
 export async function GET() {
   try {
     await connectDB();
-    const interactionTypes = await InteractionType.find({ isActive: true })
-      .sort({ order: 1, displayName: 1 });
+    const interactionTypes = await InteractionType.find({ isActive: true }).sort({ order: 1 });
     return NextResponse.json(interactionTypes);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch interaction types' },
+      { status: 500 }
+    );
   }
 }
 
