@@ -1,9 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useReports } from '@/lib/hooks/useReports';
 
 export default function ReportCard({ report, variant = 'default' }) {
   const router = useRouter();
+  const { refresh: refreshReports } = useReports();
 
   // Determine the size and layout based on variant
   const sizeClasses = {
@@ -36,6 +38,31 @@ export default function ReportCard({ report, variant = 'default' }) {
     router.push(`/reports/${report._id}/edit`);
   };
 
+  const handleReopen = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`/api/reports/${report._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...report,
+          status: 'UNRESOLVED'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reopen report');
+      }
+
+      // Refresh the reports data
+      await refreshReports();
+    } catch (error) {
+      console.error('Error reopening report:', error);
+    }
+  };
+
   return (
     <div 
       className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 overflow-hidden"
@@ -66,6 +93,14 @@ export default function ReportCard({ report, variant = 'default' }) {
               >
                 Edit
               </button>
+              {report.status === 'RESOLVED' && (
+                <button 
+                  onClick={handleReopen}
+                  className="text-yellow-600 hover:text-yellow-800 hover:underline"
+                >
+                  Reopen
+                </button>
+              )}
               <span>{new Date(report.createdAt).toLocaleDateString()}</span>
             </div>
           </div>

@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { useTypes } from '@/lib/hooks/useTypes';
 import { useStudents } from '@/lib/hooks/useStudents';
+import { useReports } from '@/lib/hooks/useReports';
 
 export default function ReportFormModal({ open, onClose }) {
   const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes();
   const { students, loading: studentsLoading, error: studentsError } = useStudents();
+  const { refresh: refreshReports } = useReports();
   const [page, setPage] = useState(1);
   const [interaction, setInteraction] = useState('');
   const [infraction, setInfraction] = useState('');
@@ -88,7 +90,7 @@ export default function ReportFormModal({ open, onClose }) {
           submitterEmail,
           interaction,
           infraction: interaction === 'INFRACTION' ? infraction : 'NONE',
-          intervention: checkedInterventions.join(','),
+          intervention: interaction === 'INFRACTION' ? checkedInterventions.join(',') : 'NONE',
           notes: notes,
           interactionTimestamp: new Date().toISOString(),
           status: resolve ? 'RESOLVED' : 'UNRESOLVED'
@@ -118,7 +120,23 @@ export default function ReportFormModal({ open, onClose }) {
       });
 
       await Promise.all(reportPromises);
+      
+      // Refresh reports data immediately after successful submission
+      await refreshReports();
+      
+      // Reset all form state
+      setPage(1);
+      setInteraction('');
+      setInfraction('');
+      setSelectedStudents([]);
+      setCheckedInterventions([]);
+      setShowInterventionDropdown(false);
+      setNotes('');
+      setAdditionalComments('');
+      setSearchTerm('');
       setShowConfirmation(false);
+      
+      // Close the modal
       onClose();
     } catch (err) {
       console.error('Error creating report:', err);
@@ -180,7 +198,7 @@ export default function ReportFormModal({ open, onClose }) {
                   placeholder="Search students..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                  className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-800"
                 />
                 <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 transform -translate-y-1/2" />
               </div>

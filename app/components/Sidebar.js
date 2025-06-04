@@ -1,5 +1,5 @@
 "use client";
-import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -7,6 +7,7 @@ const navLinks = [
   { name: 'History', icon: ClockIcon, href: '/dashboard' },
   { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
   { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
+  { name: 'Students', icon: AcademicCapIcon, href: '/students' },
   { name: 'Users', icon: UserGroupIcon, href: '/users' },
 ];
 

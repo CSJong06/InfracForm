@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/app/components/Sidebar';
 import { useTypes } from '@/lib/hooks/useTypes';
 import { useStudents } from '@/lib/hooks/useStudents';
+import { useReports } from '@/lib/hooks/useReports';
 import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 export default function EditReportPage({ params }) {
@@ -23,6 +24,7 @@ export default function EditReportPage({ params }) {
 
   const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes();
   const { students, loading: studentsLoading, error: studentsError } = useStudents();
+  const { refresh: refreshReports } = useReports();
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -78,7 +80,11 @@ export default function EditReportPage({ params }) {
       );
 
       await Promise.all(updatePromises);
-      router.push('/reports');
+      
+      // Refresh reports data before navigation
+      await refreshReports();
+      
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
