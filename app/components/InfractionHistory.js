@@ -2,6 +2,7 @@
 
 import { useReports } from '@/lib/hooks/useReports';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 const formatValue = (value) => {
   return value
@@ -12,77 +13,92 @@ const formatValue = (value) => {
 
 export default function InfractionHistory() {
   const { reports, loading, error } = useReports();
+  const router = useRouter();
+
+  const handleEdit = (reportId) => {
+    router.push(`/reports/${reportId}/edit`);
+  };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Infraction History</h2>
+      <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-36 bg-gray-200 rounded-lg"></div>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Infraction History</h2>
-        <div className="text-red-600">Error loading history: {error}</div>
-      </div>
+      <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
+        <div className="bg-red-50 text-red-500 p-4 rounded-lg">
+          Error loading reports: {error}
+        </div>
+      </section>
     );
   }
 
-  const sortedReports = [...reports].sort((a, b) => 
-    new Date(b.entryTimestamp) - new Date(a.entryTimestamp)
-  );
+  // Show all reports in the history section
+  const historyReports = reports;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold mb-4 text-gray-900">Infraction History</h2>
-      {sortedReports.length === 0 ? (
-        <p className="text-gray-700">No reports found</p>
+    <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
+      {historyReports.length === 0 ? (
+        <div className="text-gray-500">No report history found.</div>
       ) : (
-        <div className="space-y-4">
-          {sortedReports.map((report) => (
-            <div key={report._id} className="border-b pb-4 last:border-b-0">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="font-medium text-gray-900">
-                    {report.studentName || `Student #${report.studentNumber}`}
-                  </span>
-                  <span className="text-gray-600 text-sm ml-2">
-                    {format(new Date(report.entryTimestamp), 'MMM d, yyyy h:mm a')}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-sm font-medium ${
-                    report.interaction === 'INFRACTION' ? 'text-red-700' : 'text-green-700'
-                  }`}>
-                    {formatValue(report.interaction)}
-                  </span>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {historyReports.map((report) => (
+            <div 
+              key={report._id} 
+              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 overflow-hidden"
+            >
+              <div className="p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 text-base">
+                      {report.studentName}
+                    </h3>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {report.interaction === 'INFRACTION' ? 'Infraction' : 'Shout-out'}
+                    </p>
+                  </div>
+                  <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
                     report.status === 'RESOLVED' 
-                      ? 'bg-green-100 text-green-800' 
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {formatValue(report.status)}
+                    {report.status}
                   </span>
                 </div>
-              </div>
-              {report.interaction === 'INFRACTION' && (
-                <div className="mb-2">
-                  <span className="text-sm text-red-700 font-medium">{formatValue(report.infraction)}</span>
-                  <span className="text-sm text-gray-700 ml-2">- {formatValue(report.intervention)}</span>
+                <div className="h-px bg-gray-200 my-2"></div>
+                <p className="text-gray-600 text-xs line-clamp-2">{report.notes}</p>
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>{report.reportedBy}</span>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleEdit(report._id)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <p className="text-gray-800 text-sm">{report.notes}</p>
+              </div>
             </div>
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 } 

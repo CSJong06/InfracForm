@@ -3,10 +3,11 @@ import connectDB from '../../../../lib/mongodb.js';
 import Report from '../../../../lib/models/Report.js';
 
 // GET single report
-export async function GET(request, { params }) {
+export async function GET(request, context) {
   try {
     await connectDB();
-    const report = await Report.findById(params.id);
+    const { id } = await context.params;
+    const report = await Report.findById(id);
     
     if (!report) {
       return NextResponse.json(
@@ -17,6 +18,7 @@ export async function GET(request, { params }) {
     
     return NextResponse.json(report);
   } catch (error) {
+    console.error('Error fetching report:', error);
     return NextResponse.json(
       { error: 'Failed to fetch report' },
       { status: 500 }
@@ -24,24 +26,30 @@ export async function GET(request, { params }) {
   }
 }
 
-// PATCH update report status
-export async function PATCH(request, { params }) {
+// PATCH update report
+export async function PATCH(request, context) {
   try {
     await connectDB();
+    const { id } = await context.params;
     const data = await request.json();
     
-    // Only allow status updates
-    if (!data.status || !['RESOLVED', 'UNRESOLVED'].includes(data.status.toUpperCase())) {
+    // Validate status if provided
+    if (data.status && !['RESOLVED', 'UNRESOLVED'].includes(data.status.toUpperCase())) {
       return NextResponse.json(
         { error: 'Invalid status value' },
         { status: 400 }
       );
     }
     
+    // Convert status to uppercase if provided
+    if (data.status) {
+      data.status = data.status.toUpperCase();
+    }
+    
     const report = await Report.findByIdAndUpdate(
-      params.id,
-      { status: data.status.toUpperCase() },
-      { new: true }
+      id,
+      { $set: data },
+      { new: true, runValidators: true }
     );
     
     if (!report) {
@@ -53,8 +61,9 @@ export async function PATCH(request, { params }) {
     
     return NextResponse.json(report);
   } catch (error) {
+    console.error('Error updating report:', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: 'Failed to update report' },
       { status: 500 }
     );
   }

@@ -1,22 +1,20 @@
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb.js';
-import Report from '../../../lib/models/Report.js';
+import Report, { handleIndexes } from '../../../lib/models/Report.js';
 
 // GET all reports with optional status filter
 export async function GET(request) {
   try {
     await connectDB();
+    await handleIndexes();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     
-    const query = {};
-    if (status) {
-      query.status = status.toUpperCase();
-    }
+    const query = status ? { status } : {};
     
     const reports = await Report.find(query)
       .sort({ entryTimestamp: -1 })
-      .limit(50);
+      .limit(100);
       
     return NextResponse.json(reports);
   } catch (error) {
@@ -32,6 +30,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
+    await handleIndexes();
     const data = await request.json();
     
     console.log('Received report data:', data); // Debug log
@@ -72,9 +71,11 @@ export async function POST(request) {
       data.status = 'UNRESOLVED';
     }
 
-    // Ensure studentNumber is a number
-    if (typeof data.studentNumber === 'string') {
-      data.studentNumber = parseInt(data.studentNumber, 10);
+    // Ensure studentNumber is a string
+    if (typeof data.studentNumber === 'number') {
+      data.studentNumber = data.studentNumber.toString().padStart(6, '0');
+    } else if (typeof data.studentNumber === 'string') {
+      data.studentNumber = data.studentNumber.padStart(6, '0');
     }
 
     // Ensure intervention is a string
@@ -88,7 +89,8 @@ export async function POST(request) {
     const nextID = await Report.getNextInteractionID();
     const report = new Report({
       ...data,
-      interactionID: nextID
+      interactionID: nextID,
+      editUrl: `/reports/${nextID}/edit`
     });
     await report.save();
     
