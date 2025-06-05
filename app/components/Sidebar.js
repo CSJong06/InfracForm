@@ -1,5 +1,5 @@
 "use client";
-import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon, UsersIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -8,16 +8,26 @@ const navLinks = [
   { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
   { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
   { name: 'Students', icon: AcademicCapIcon, href: '/students' },
-  { name: 'Users', icon: UserGroupIcon, href: '/users' },
+  { name: 'Users', icon: UsersIcon, href: '/users' },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = (e) => {
+  const handleLogout = async (e) => {
     e.preventDefault();
-    router.push('/');
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (

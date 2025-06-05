@@ -3,6 +3,7 @@
 import { useReports } from '@/lib/hooks/useReports';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import ReportCard from './ReportCard';
 
 const formatValue = (value) => {
   return value
@@ -11,8 +12,9 @@ const formatValue = (value) => {
     .join(' ');
 };
 
-export default function InfractionHistory() {
-  const { reports, loading, error } = useReports();
+export default function InfractionHistory({ reports: propReports, onImportClick }) {
+  const { reports: contextReports, loading, error } = useReports();
+  const reports = propReports || contextReports;
   const router = useRouter();
 
   const handleEdit = (reportId) => {
@@ -21,12 +23,20 @@ export default function InfractionHistory() {
 
   if (loading) {
     return (
-      <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
+      <section className="bg-white/80 rounded-2xl shadow-md p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
+          <button
+            onClick={onImportClick}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Import Reports
+          </button>
+        </div>
         <div className="animate-pulse">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-36 bg-gray-200 rounded-lg"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-lg"></div>
             ))}
           </div>
         </div>
@@ -36,8 +46,16 @@ export default function InfractionHistory() {
 
   if (error) {
     return (
-      <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
+      <section className="bg-white/80 rounded-2xl shadow-md p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
+          <button
+            onClick={onImportClick}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Import Reports
+          </button>
+        </div>
         <div className="bg-red-50 text-red-500 p-4 rounded-lg">
           Error loading reports: {error}
         </div>
@@ -45,57 +63,23 @@ export default function InfractionHistory() {
     );
   }
 
-  // Show all reports in the history section
-  const historyReports = reports;
-
   return (
-    <section className="bg-white/80 rounded-2xl shadow-md p-6 mb-2">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 tracking-tight">Report History</h2>
-      {historyReports.length === 0 ? (
-        <div className="text-gray-500">No report history found.</div>
+    <section className="bg-white/80 rounded-2xl shadow-md p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
+        <button
+          onClick={onImportClick}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Import Reports
+        </button>
+      </div>
+      {reports.length === 0 ? (
+        <div className="text-gray-500">No reports found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {historyReports.map((report) => (
-            <div 
-              key={report._id} 
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 overflow-hidden"
-            >
-              <div className="p-3">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h3 className="font-semibold text-gray-800 text-base">
-                      {report.studentName}
-                    </h3>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      {report.interaction === 'INFRACTION' ? 'Infraction' : 'Shout-out'}
-                    </p>
-                  </div>
-                  <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
-                    report.status === 'RESOLVED' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {report.status}
-                  </span>
-                </div>
-                <div className="h-px bg-gray-200 my-2"></div>
-                <p className="text-gray-600 text-xs line-clamp-2">{report.notes}</p>
-                <div className="mt-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{report.reportedBy}</span>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleEdit(report._id)}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {reports.map((report) => (
+            <ReportCard key={report._id} report={report} />
           ))}
         </div>
       )}

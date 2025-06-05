@@ -1,8 +1,17 @@
 import LoginForm from './components/LoginForm';
 import Banner from './components/Banner';
 import Footer from './components/Footer';
+import { getSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+export default async function Home() {
+  const session = await getSession();
+  
+  // If user is already logged in, redirect to dashboard
+  if (session) {
+    redirect('/dashboard');
+  }
+
   return (
     <div className="min-h-screen relative flex flex-col bg-gradient-to-br from-slate-100 to-blue-50">
       <Banner />

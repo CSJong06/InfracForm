@@ -74,7 +74,7 @@ export default function ReportCard({ report, variant = 'default' }) {
               {report.studentName}
             </h3>
             <p className={`text-gray-600 mt-0.5 ${textClasses[variant].subtitle}`}>
-              {report.interaction === 'INFRACTION' ? 'Infraction' : 'Shout-out'}
+              {report.interaction}
             </p>
           </div>
           <span className={`px-1.5 py-0.5 ${textClasses[variant].subtitle} font-medium rounded-full ${statusColors[report.status]}`}>

@@ -3,8 +3,9 @@
 import { useReports } from '@/lib/hooks/useReports';
 import ReportCard from './ReportCard';
 
-export default function RecentInfractions() {
-  const { reports, loading, error } = useReports();
+export default function RecentInfractions({ reports: propReports }) {
+  const { reports: contextReports, loading, error } = useReports();
+  const reports = propReports || contextReports;
 
   if (loading) {
     return (
