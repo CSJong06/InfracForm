@@ -7,7 +7,7 @@ export async function GET(request, context) {
   try {
     await connectDB();
     const { id } = await context.params;
-    const report = await Report.findById(id);
+    const report = await Report.findOne({ interactionID: id });
     
     if (!report) {
       return NextResponse.json(
@@ -46,8 +46,8 @@ export async function PATCH(request, context) {
       data.status = data.status.toUpperCase();
     }
     
-    const report = await Report.findByIdAndUpdate(
-      id,
+    const report = await Report.findOneAndUpdate(
+      { interactionID: id },
       { $set: data },
       { new: true, runValidators: true }
     );

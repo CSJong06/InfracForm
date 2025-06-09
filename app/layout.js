@@ -1,21 +1,21 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { ReportsProvider } from '@/lib/hooks/useReports';
+import Providers from './providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Infraction Form',
-  description: 'Track and manage student infractions',
+  description: 'Infraction Form Application',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ReportsProvider>
+        <Providers>
           {children}
-        </ReportsProvider>
+        </Providers>
       </body>
     </html>
   );

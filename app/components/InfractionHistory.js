@@ -1,8 +1,7 @@
 'use client';
 
-import { useReports } from '@/lib/hooks/useReports';
-import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { useReports } from '@/lib/hooks/useReports';
 import ReportCard from './ReportCard';
 
 const formatValue = (value) => {
@@ -79,7 +78,11 @@ export default function InfractionHistory({ reports: propReports, onImportClick 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {reports.map((report) => (
-            <ReportCard key={report._id} report={report} />
+            <ReportCard 
+              key={report._id} 
+              report={report} 
+              onEdit={() => handleEdit(report._id)}
+            />
           ))}
         </div>
       )}

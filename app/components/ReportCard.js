@@ -35,13 +35,13 @@ export default function ReportCard({ report, variant = 'default' }) {
 
   const handleEdit = (e) => {
     e.preventDefault();
-    router.push(`/reports/${report._id}/edit`);
+    router.push(`/reports/${report.interactionID}/edit`);
   };
 
   const handleReopen = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/reports/${report._id}`, {
+      const response = await fetch(`/api/reports/${report.interactionID}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
