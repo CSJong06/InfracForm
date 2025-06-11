@@ -67,4 +67,32 @@ export async function PATCH(request, context) {
       { status: 500 }
     );
   }
+}
+
+// DELETE report
+export async function DELETE(request, context) {
+  try {
+    await connectDB();
+    const { id } = context.params;
+    
+    const deletedReport = await Report.findOneAndDelete({ interactionID: id });
+    
+    if (!deletedReport) {
+      return NextResponse.json(
+        { error: 'Report not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json({ 
+      message: 'Report deleted successfully',
+      deletedReport 
+    });
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete report' },
+      { status: 500 }
+    );
+  }
 } 

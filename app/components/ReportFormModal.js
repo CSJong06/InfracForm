@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTypes } from '@/lib/hooks/useTypes';
 import { useStudents } from '@/lib/hooks/useStudents';
 import { useReports } from '@/lib/hooks/useReports';
-import { DisplayToCodeMap } from '@/lib/constants/interactionTypes';
+import { DisplayToCodeMap, CodeToDisplayMap } from '@/lib/constants/interactionTypes';
 
-export default function ReportFormModal({ open, onClose }) {
+export default function ReportFormModal({ open, onClose, report = null }) {
   const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes();
   const { students = [], loading: studentsLoading, error: studentsError } = useStudents();
-  const { refresh: refreshReports } = useReports();
+  const { refresh: refreshReports, deleteReport } = useReports();
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     interaction: '',
@@ -17,7 +17,8 @@ export default function ReportFormModal({ open, onClose }) {
     notes: '',
     interventionNotes: '',
     interactionTimestamp: new Date().toISOString().slice(0, 16),
-    resolved: false
+    resolved: false,
+    showInterventionPrompt: false
   });
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [showInterventionDropdown, setShowInterventionDropdown] = useState(false);
@@ -46,12 +47,50 @@ export default function ReportFormModal({ open, onClose }) {
     fetchSession();
   }, []);
 
+  // Initialize form data when editing an existing report
+  useEffect(() => {
+    // Only initialize if editing and formData.interaction is not set
+    if (
+      report &&
+      !typesLoading &&
+      interactionTypes.length > 0 &&
+      (!formData.interaction || formData.interaction === '')
+    ) {
+      const interactionType = interactionTypes.find(t => t.name === report.interaction);
+      const newFormData = {
+        interaction: interactionType ? interactionType.name : '',
+        infraction: report.infraction || '',
+        intervention: report.intervention || '',
+        notes: report.notes || '',
+        interventionNotes: report.interventionNotes || '',
+        interactionTimestamp: report.interactionTimestamp ? new Date(report.interactionTimestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+        resolved: report.status === 'RESOLVED',
+        showInterventionPrompt: false
+      };
+      setFormData(newFormData);
+      if (report.studentNumber) {
+        const student = students.find(s => s.studentId === report.studentNumber);
+        if (student) {
+          setSelectedStudents([student]);
+        }
+      }
+      if (report.intervention && report.intervention !== 'NONE') {
+        setCheckedInterventions([report.intervention]);
+      }
+    }
+  }, [report, students, interactionTypes, typesLoading]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    console.log('handleChange - name:', name, 'value:', value);
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: value
+      };
+      console.log('Updated formData:', newData);
+      return newData;
+    });
   };
 
   const handleStudentSelect = (student) => {
@@ -63,18 +102,21 @@ export default function ReportFormModal({ open, onClose }) {
   };
 
   const handleNextPage = () => {
-    if (page === 1) {
-      if (selectedStudents.length === 0) {
-        setError('Please select at least one student');
-        return;
-      }
-      setPage(2);
-    } else if (page === 2) {
-      if (isInfraction) {
+    if (page === 1 && selectedStudents.length === 0) {
+      setError('Please select at least one student');
+      return;
+    }
+    setError(null);
+    if (page === 2) {
+      if (formData.interaction === 'INFRACTION') {
+        // If it's an infraction, go directly to intervention page
         setPage(3);
       } else {
-        setShowConfirmation(true);
+        // For non-infractions, show the intervention prompt
+        setFormData(prev => ({ ...prev, showInterventionPrompt: true }));
       }
+    } else {
+      setPage(page + 1);
     }
   };
 
@@ -84,57 +126,40 @@ export default function ReportFormModal({ open, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (isInfraction && page === 2) {
-      setPage(3);
-    } else {
-      setShowConfirmation(true);
-    }
+    setFormData(prev => ({ ...prev, showInterventionPrompt: true }));
   };
 
-  const handleConfirmSubmit = async (resolved) => {
+  const handleConfirmSubmit = async (isResolved) => {
     try {
-      setIsSubmitting(true);
       setError(null);
+      setIsSubmitting(true);
 
-      if (!session?.email) {
-        throw new Error('User session not found');
-      }
-
-      if (selectedStudents.length === 0) {
+      if (!selectedStudents || selectedStudents.length === 0) {
         throw new Error('No student selected');
       }
 
-      // Validate required fields for infractions
-      if (formData.interaction === 'Infraction') {
-        if (!formData.infraction) {
-          throw new Error('Infraction type is required for infraction reports');
-        }
-        if (!formData.intervention) {
-          throw new Error('Intervention is required for infraction reports');
-        }
+      // Get the selected interaction type
+      const selectedInteraction = interactionTypes.find(t => t.name === formData.interaction);
+      if (!selectedInteraction) {
+        throw new Error('Invalid interaction type');
       }
 
+      // Prepare the report data
       const reportData = {
         studentNumber: selectedStudents[0].studentId,
         submitterEmail: session.email,
-        interaction: formData.interaction,
-        interactioncode: formData.interaction === 'Infraction' ? 'I' : 'S',
+        interaction: selectedInteraction.name,
+        interactioncode: selectedInteraction.name,
         notes: formData.notes,
-        interactionTimestamp: new Date(formData.interactionTimestamp).toISOString(),
-        status: resolved ? 'RESOLVED' : 'UNRESOLVED',
-        entryTimestamp: new Date().toISOString()
+        interactionTimestamp: formData.interactionTimestamp,
+        status: isResolved ? 'RESOLVED' : 'UNRESOLVED',
+        entryTimestamp: new Date().toISOString(),
+        infraction: selectedInteraction.name === 'INFRACTION' ? (formData.infraction || 'NONE') : 'NONE',
+        intervention: formData.intervention || 'NONE',
+        interventionNotes: formData.interventionNotes || ''
       };
 
-      if (formData.interaction === 'Infraction') {
-        reportData.infraction = formData.infraction;
-        reportData.intervention = formData.intervention;
-        reportData.interventionNotes = formData.interventionNotes || '';
-      } else {
-        reportData.infraction = 'NONE';
-        reportData.intervention = 'NONE';
-      }
-
-      console.log('Submitting report data:', JSON.stringify(reportData, null, 2));
+      console.log('Debug - Final Report Data:', reportData);
 
       const response = await fetch('/api/reports', {
         method: 'POST',
@@ -146,13 +171,17 @@ export default function ReportFormModal({ open, onClose }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit report');
+        console.error('Server response error:', errorData);
+        throw new Error(errorData.error || 'Failed to create report');
       }
 
-      await refreshReports();
+      const report = await response.json();
+      console.log('Report created successfully:', report);
       onClose();
+      window.location.reload();
     } catch (err) {
-      setError(err.message || 'Failed to submit report');
+      console.error('Error creating report:', err);
+      setError(err.message || 'Failed to create report. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -174,16 +203,19 @@ export default function ReportFormModal({ open, onClose }) {
     setShowConfirmation(false);
   };
 
-  const isInfraction = formData.interaction === 'Infraction';
-
   const renderProgressDots = () => {
+    // Show 3 dots if we're on intervention page or if it's an infraction
+    const totalDots = (page === 3 || formData.interaction === 'INFRACTION') ? 3 : 2;
     return (
-      <div className="flex justify-center gap-2 mb-4">
-        <div className={`w-2 h-2 rounded-full ${page === 1 ? 'bg-blue-500' : 'bg-gray-300'}`} />
-        <div className={`w-2 h-2 rounded-full ${page === 2 ? 'bg-blue-500' : 'bg-gray-300'}`} />
-        {isInfraction && (
-          <div className={`w-2 h-2 rounded-full ${page === 3 ? 'bg-blue-500' : 'bg-gray-300'}`} />
-        )}
+      <div className="flex items-center gap-1.5">
+        {Array.from({ length: totalDots }).map((_, index) => (
+          <div
+            key={index}
+            className={`w-2 h-2 rounded-full ${
+              page === index + 1 ? 'bg-blue-600' : 'bg-gray-300'
+            }`}
+          />
+        ))}
       </div>
     );
   };
@@ -224,9 +256,38 @@ export default function ReportFormModal({ open, onClose }) {
   };
 
   const formatInterventionText = (code) => {
-    const intervention = interventionTypes.find(t => t.name === code);
-    return intervention ? intervention.displayName : formatDisplayText(code);
+    return formatDisplayText(code);
   };
+
+  const handleDelete = async () => {
+    if (!report?.interactionID) return;
+    
+    if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+      try {
+        await deleteReport(report.interactionID);
+        onClose();
+      } catch (error) {
+        setError(error.message || 'Failed to delete report');
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
+
+  // Debug useEffect for dropdown value
+  useEffect(() => {
+    if (page === 2) {
+      console.log('--- DEBUG: Dropdown Render ---');
+      console.log('formData.interaction:', formData.interaction, typeof formData.interaction);
+      console.log('interactionTypes:', interactionTypes.map(t => t.name));
+      interactionTypes.forEach(type => {
+        console.log(`Option: ${type.name} (${typeof type.name}) === ${formData.interaction} (${typeof formData.interaction}) =>`, type.name === formData.interaction);
+      });
+    }
+  }, [formData.interaction, interactionTypes, page]);
 
   if (!open) return null;
   if (studentsLoading) return (
@@ -262,6 +323,28 @@ export default function ReportFormModal({ open, onClose }) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xl mx-auto p-6 z-10 flex flex-col gap-4 min-h-[28rem]">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {report ? 'Edit Report' : 'New Report'}
+          </h2>
+          <div className="flex items-center gap-2">
+            {report && (
+              <button
+                onClick={handleDelete}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete report"
+              >
+                <TrashIcon className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
         {page === 1 && (
           <>
             <div className="flex items-center justify-between mb-2">
@@ -307,8 +390,13 @@ export default function ReportFormModal({ open, onClose }) {
                 ))
               )}
             </div>
+            {error && (
+              <div className="text-red-500 text-sm mb-4">
+                {error}
+              </div>
+            )}
             <div className="flex items-center justify-between mt-auto">
-              <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={onClose}>Cancel</button>
+              <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={handleCancel}>Cancel</button>
               <div className="flex items-center gap-2">
                 {renderProgressDots()}
               </div>
@@ -325,53 +413,63 @@ export default function ReportFormModal({ open, onClose }) {
         
         {page === 2 && (
           <>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-semibold text-gray-800">Report</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Report Details</h2>
+              <button onClick={handleCancel} className="text-gray-500 hover:text-gray-700">
+                <XMarkIcon className="w-6 h-6" />
+              </button>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 flex flex-col gap-4 border border-gray-200">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-3">
                 <label className="text-gray-700 w-28 shrink-0 text-sm">Interaction</label>
-                <select
-                  className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
-                  value={formData.interaction}
-                  onChange={(e) => handleChange({ target: { name: 'interaction', value: e.target.value } })}
-                >
-                  <option value="">Select</option>
-                  {Object.entries(DisplayToCodeMap).map(([display, code]) => (
-                    <option key={code} value={display}>{display}</option>
-                  ))}
-                </select>
+                <div>
+                  <select
+                    name="interaction"
+                    value={formData.interaction || ''}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md text-gray-900"
+                    required
+                  >
+                    <option value="">Select an interaction type</option>
+                    {interactionTypes.map((type) => (
+                      <option key={type.name} value={type.name}>
+                        {type.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              {isInfraction && (
+
+              {formData.interaction === 'INFRACTION' && (
                 <div className="flex items-center gap-3">
                   <label className="text-gray-700 w-28 shrink-0 text-sm">Infraction</label>
                   <select
-                    className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
+                    name="infraction"
                     value={formData.infraction}
-                    onChange={(e) => handleChange({ target: { name: 'infraction', value: e.target.value } })}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded-md text-gray-900"
+                    required
                   >
-                    <option value="">Select</option>
-                    <option value="CUT_CLASS">cut class or &gt;15min late</option>
-                    <option value="IMPROPER_LANGUAGE">improper language or profanity</option>
-                    <option value="FAILURE_TO_MEET_EXPECTATIONS">failure to meet classroom expectations</option>
-                    <option value="CELLPHONE">cellphone</option>
-                    <option value="LEAVING_WITHOUT_PERMISSION">leaving class without permission</option>
-                    <option value="MISUSE_OF_HALLPASS">misuse of hallpass</option>
-                    <option value="TARDINESS">tardiness to class</option>
-                    <option value="MINOR_VANDALISM">minor vandalism</option>
-                    <option value="NONE">NONE</option>
+                    <option value="">Select an infraction type</option>
+                    {infractionTypes.map((type) => (
+                      <option key={type.name} value={type.name}>
+                        {type.displayName}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-gray-700 text-sm">Notes</label>
                 <textarea
                   className="border border-gray-300 rounded px-2.5 py-1.5 text-gray-700 min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
-                  placeholder="Add notes about the interaction/infraction..."
+                  placeholder="Add notes about the interaction..."
                   value={formData.notes}
                   onChange={(e) => handleChange({ target: { name: 'notes', value: e.target.value } })}
                 />
               </div>
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-gray-700 text-sm">Timestamp</label>
                 <input
@@ -381,33 +479,25 @@ export default function ReportFormModal({ open, onClose }) {
                   onChange={(e) => handleChange({ target: { name: 'interactionTimestamp', value: e.target.value } })}
                 />
               </div>
-            </div>
-            <div className="flex items-center justify-between mt-auto">
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={onClose}>Cancel</button>
-                <button className="p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700" onClick={handlePrevPage}>
-                  <ArrowLeftIcon className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                {renderProgressDots()}
-              </div>
-              {isInfraction ? (
-                <button 
-                  className="p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700" 
-                  onClick={handleNextPage}
-                >
-                  <ArrowRightIcon className="w-5 h-5" />
-                </button>
-              ) : (
+
+              <div className="flex items-center justify-between mt-auto">
+                <div className="flex items-center gap-2">
+                  <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={handleCancel}>Cancel</button>
+                  <button className="p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700" onClick={handlePrevPage}>
+                    <ArrowLeftIcon className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {renderProgressDots()}
+                </div>
                 <button 
                   className="w-fit bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold shadow text-sm"
-                  onClick={() => setShowConfirmation(true)}
+                  onClick={handleNextPage}
                 >
-                  Submit
+                  Next
                 </button>
-              )}
-            </div>
+              </div>
+            </form>
           </>
         )}
 
@@ -424,7 +514,7 @@ export default function ReportFormModal({ open, onClose }) {
                   value={formData.intervention}
                   onChange={(e) => handleChange({ target: { name: 'intervention', value: e.target.value } })}
                 >
-                  <option value="">Select</option>
+                  <option value="NONE">No Intervention</option>
                   {interventionTypes.map((type) => (
                     <option key={type.name} value={type.name}>
                       {type.displayName}
@@ -432,49 +522,70 @@ export default function ReportFormModal({ open, onClose }) {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-gray-700 text-sm">Intervention Comments</label>
-                  <button
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-                    onClick={() => {
-                      // AI generation functionality will be added later
-                      console.log('Generate AI comment');
-                    }}
-                  >
-                    <SparklesIcon className="w-4 h-4" />
-                    Generate
+
+              {formData.intervention && formData.intervention !== 'NONE' && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-gray-700 text-sm">Intervention Notes</label>
+                  <textarea
+                    className="border border-gray-300 rounded px-2.5 py-1.5 text-gray-700 min-h-[100px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                    placeholder="Add notes about the intervention..."
+                    value={formData.interventionNotes}
+                    onChange={(e) => handleChange({ target: { name: 'interventionNotes', value: e.target.value } })}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-auto">
+                <div className="flex items-center gap-2">
+                  <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={handleCancel}>Cancel</button>
+                  <button className="p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700" onClick={handlePrevPage}>
+                    <ArrowLeftIcon className="w-5 h-5" />
                   </button>
                 </div>
-                <textarea
-                  className="border border-gray-300 rounded px-2.5 py-1.5 text-gray-700 min-h-[150px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
-                  placeholder="Add comments about the intervention..."
-                  value={formData.interventionNotes}
-                  onChange={(e) => handleChange({ target: { name: 'interventionNotes', value: e.target.value } })}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-auto">
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm" onClick={onClose}>Cancel</button>
-                <button className="p-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700" onClick={handlePrevPage}>
-                  <ArrowLeftIcon className="w-5 h-5" />
+                <div className="flex items-center gap-2">
+                  {renderProgressDots()}
+                </div>
+                <button 
+                  className="w-fit bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold shadow text-sm"
+                  onClick={() => setShowConfirmation(true)}
+                >
+                  Submit
                 </button>
               </div>
-              <div className="flex items-center gap-2">
-                {renderProgressDots()}
-              </div>
-              <button 
-                className="w-fit bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold shadow text-sm"
-                onClick={() => setShowConfirmation(true)}
-              >
-                Submit
-              </button>
             </div>
           </>
         )}
 
-        {/* Confirmation Modal */}
+        {formData.showInterventionPrompt && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setFormData(prev => ({ ...prev, showInterventionPrompt: false }))} />
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-auto p-6 z-10">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Add Intervention?</h3>
+              <p className="text-gray-700 mb-6">Would you like to add an intervention for this report? This is optional but can be helpful for tracking student support.</p>
+              <div className="flex justify-end gap-3">
+                <button
+                  className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium text-sm"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, showInterventionPrompt: false }));
+                    setShowConfirmation(true);
+                  }}
+                >
+                  Skip
+                </button>
+                <button
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, showInterventionPrompt: false }));
+                    setPage(3);
+                  }}
+                >
+                  Add Intervention
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showConfirmation && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmation(false)} />
@@ -482,7 +593,7 @@ export default function ReportFormModal({ open, onClose }) {
               <h3 className="text-xl font-semibold text-gray-900 mb-4">Submit Report</h3>
               <div className="space-y-2 mb-6">
                 <p><strong className="text-gray-900">Interaction:</strong> <span className="text-gray-800">{formatDisplayText(formData.interaction)}</span></p>
-                {isInfraction && (
+                {formData.interaction === 'I' && (
                   <>
                     <p><strong className="text-gray-900">Infraction:</strong> <span className="text-gray-800">{formatInfractionText(formData.infraction)}</span></p>
                     <p><strong className="text-gray-900">Intervention:</strong> <span className="text-gray-800">{formatInterventionText(formData.intervention)}</span></p>

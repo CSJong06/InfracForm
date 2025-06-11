@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '../../../lib/mongodb.js';
 import Report, { handleIndexes } from '../../../lib/models/Report.js';
+import InteractionType from '../../../lib/models/InteractionType.js';
 
 // GET all reports with optional status filter
 export async function GET(request) {
@@ -46,6 +47,15 @@ export async function POST(request) {
       );
     }
 
+    // Validate interaction type exists in database
+    const interactionType = await InteractionType.findOne({ name: data.interaction });
+    if (!interactionType) {
+      return NextResponse.json(
+        { error: `Invalid interaction type: ${data.interaction}` },
+        { status: 400 }
+      );
+    }
+
     // Validate infraction-specific fields
     if (data.interaction === 'Infraction') {
       if (!data.infraction) {
@@ -54,15 +64,13 @@ export async function POST(request) {
           { status: 400 }
         );
       }
-      if (!data.intervention) {
-        return NextResponse.json(
-          { error: 'Intervention is required for infraction reports' },
-          { status: 400 }
-        );
-      }
     } else {
       // Set default values for non-infraction reports
       data.infraction = 'NONE';
+    }
+
+    // Set default intervention if not provided
+    if (!data.intervention) {
       data.intervention = 'NONE';
     }
 
@@ -82,6 +90,9 @@ export async function POST(request) {
     if (Array.isArray(data.intervention)) {
       data.intervention = data.intervention.join(',');
     }
+
+    // Set interactioncode to match interaction
+    data.interactioncode = data.interaction;
 
     console.log('Processed report data:', data); // Debug log
 

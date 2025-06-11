@@ -7,6 +7,7 @@ import { useStudents } from '@/lib/hooks/useStudents';
 import { useReports } from '@/lib/hooks/useReports';
 import { DisplayToCodeMap } from '@/lib/constants/interactionTypes';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { InteractionEnum, InterventionEnum } from '@/lib/constants/interactionTypes';
 
 export default function EditReportPage({ params }) {
   const router = useRouter();
@@ -79,6 +80,16 @@ export default function EditReportPage({ params }) {
     fetchReport();
   }, [reportId]);
 
+  // Debug useEffect for dropdown value
+  useEffect(() => {
+    console.log('--- DEBUG: Edit Page Dropdown Render ---');
+    console.log('formData.interaction:', formData.interaction, typeof formData.interaction);
+    console.log('interactionTypes:', interactionTypes.map(t => t.name));
+    interactionTypes.forEach(type => {
+      console.log(`Option: ${type.name} (${typeof type.name}) === ${formData.interaction} (${typeof formData.interaction}) =>`, type.name === formData.interaction);
+    });
+  }, [formData.interaction, interactionTypes]);
+
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
     setFormData(prev => ({
@@ -111,7 +122,7 @@ export default function EditReportPage({ params }) {
       const updateData = {
         studentNumber: selectedStudent.studentId,
         interaction: formData.interaction,
-        interactioncode: formData.interaction === 'Infraction' ? 'I' : 'S',
+        interactioncode: formData.interaction,
         notes: formData.notes,
         interactionTimestamp: new Date(formData.interactionTimestamp).toISOString(),
         status: formData.resolved ? 'RESOLVED' : 'UNRESOLVED'
@@ -246,51 +257,51 @@ export default function EditReportPage({ params }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, interaction: e.target.value }))}
                 >
                   <option value="">Select</option>
-                  {Object.entries(DisplayToCodeMap).map(([display, code]) => (
-                    <option key={code} value={display}>{display}</option>
+                  {interactionTypes.map((type) => (
+                    <option key={type.name} value={type.name}>
+                      {type.displayName}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {formData.interaction === 'Infraction' && (
-                <>
-                  <div className="flex items-center gap-3">
-                    <label className="text-gray-900 w-28 shrink-0 text-sm font-medium">Infraction</label>
-                    <select
-                      className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
-                      value={formData.infraction}
-                      onChange={(e) => setFormData(prev => ({ ...prev, infraction: e.target.value }))}
-                    >
-                      <option value="">Select</option>
-                      <option value="CUT_CLASS">cut class or &gt;15min late</option>
-                      <option value="IMPROPER_LANGUAGE">improper language or profanity</option>
-                      <option value="FAILURE_TO_MEET_EXPECTATIONS">failure to meet classroom expectations</option>
-                      <option value="CELLPHONE">cellphone</option>
-                      <option value="LEAVING_WITHOUT_PERMISSION">leaving class without permission</option>
-                      <option value="MISUSE_OF_HALLPASS">misuse of hallpass</option>
-                      <option value="TARDINESS">tardiness to class</option>
-                      <option value="MINOR_VANDALISM">minor vandalism</option>
-                      <option value="NONE">NONE</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <label className="text-gray-900 w-28 shrink-0 text-sm font-medium">Intervention</label>
-                    <select
-                      className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
-                      value={formData.intervention}
-                      onChange={(e) => setFormData(prev => ({ ...prev, intervention: e.target.value }))}
-                    >
-                      <option value="">Select</option>
-                      {interventionTypes?.map((type) => (
-                        <option key={type.name} value={type.name}>
-                          {type.displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
+              {formData.interaction === 'I' && (
+                <div className="flex items-center gap-3">
+                  <label className="text-gray-900 w-28 shrink-0 text-sm font-medium">Infraction</label>
+                  <select
+                    className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
+                    value={formData.infraction}
+                    onChange={(e) => setFormData(prev => ({ ...prev, infraction: e.target.value }))}
+                  >
+                    <option value="">Select</option>
+                    <option value="CUT_CLASS">Cut class or &gt;15min late</option>
+                    <option value="IMPROPER_LANGUAGE">Improper language or profanity</option>
+                    <option value="FAILURE_TO_MEET_EXPECTATIONS">Failure to meet classroom expectations</option>
+                    <option value="CELLPHONE">Cellphone</option>
+                    <option value="LEAVING_WITHOUT_PERMISSION">Leaving class without permission</option>
+                    <option value="MISUSE_OF_HALLPASS">Misuse of hallpass</option>
+                    <option value="TARDINESS">Tardiness to class</option>
+                    <option value="MINOR_VANDALISM">Minor vandalism</option>
+                    <option value="NONE">None</option>
+                  </select>
+                </div>
               )}
+
+              <div className="flex items-center gap-3">
+                <label className="text-gray-900 w-28 shrink-0 text-sm font-medium">Intervention</label>
+                <select
+                  className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-200 min-w-0 text-sm"
+                  value={formData.intervention}
+                  onChange={(e) => setFormData(prev => ({ ...prev, intervention: e.target.value }))}
+                >
+                  <option value="">Select</option>
+                  {Object.entries(InterventionEnum).map(([code, display]) => (
+                    <option key={code} value={code}>
+                      {display}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-gray-900 text-sm font-medium">Notes</label>
@@ -302,7 +313,7 @@ export default function EditReportPage({ params }) {
                 />
               </div>
 
-              {formData.interaction === 'Infraction' && (
+              {formData.intervention && formData.intervention !== 'NONE' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-gray-900 text-sm font-medium">Intervention Notes</label>
                   <textarea
