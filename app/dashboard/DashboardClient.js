@@ -234,6 +234,7 @@ export default function DashboardClient({ session }) {
           <FloatingActionButton />
         </div>
         
+        <ReportFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
         <ClearDatabaseModal 
           open={clearModalOpen} 
           onClose={() => setClearModalOpen(false)} 
