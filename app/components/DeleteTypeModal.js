@@ -4,7 +4,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 export default function DeleteTypeModal({ 
   open, 
   onClose, 
-  type,
+  type = null, 
   typeCategory,
   onDelete 
 }) {
@@ -16,7 +16,8 @@ export default function DeleteTypeModal({
     setError('');
 
     try {
-      const response = await fetch(`/api/form-types/${typeCategory}-types?name=${type.name}`, {
+      const endpoint = `/api/form-types/${typeCategory}-types?name=${encodeURIComponent(type.name)}`;
+      const response = await fetch(endpoint, {
         method: 'DELETE',
       });
 
@@ -41,7 +42,9 @@ export default function DeleteTypeModal({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-auto p-6 z-10">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Delete Type</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Delete {typeCategory.charAt(0).toUpperCase() + typeCategory.slice(1)} Type
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -57,11 +60,8 @@ export default function DeleteTypeModal({
         )}
 
         <div className="mb-6">
-          <p className="text-gray-600">
-            Are you sure you want to delete the {typeCategory} type "{type.displayName}"?
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            This action cannot be undone. If this type is in use by any reports, it cannot be deleted.
+          <p className="text-gray-700">
+            Are you sure you want to delete &ldquo;{type.displayName}&rdquo;? This action cannot be undone.
           </p>
         </div>
 

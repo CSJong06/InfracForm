@@ -82,6 +82,22 @@ export default function ReportFormModal({ open, onClose, report = null }) {
     }
   }, [report, students, interactionTypes, typesLoading]);
 
+  useEffect(() => {
+    if (formData.interaction === 'INFRACTION') {
+      setFormData(prev => ({
+        ...prev,
+        infraction: prev.infraction || 'NONE',
+        intervention: prev.intervention || 'NONE'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        infraction: 'NONE',
+        intervention: 'NONE'
+      }));
+    }
+  }, [formData.interaction]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     console.log('handleChange - name:', name, 'value:', value);
