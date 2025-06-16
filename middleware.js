@@ -4,6 +4,9 @@ import { jwtVerify } from 'jose';
 // List of public paths that don't require authentication
 const publicPaths = ['/', '/api/auth/login'];
 
+// List of admin-only paths
+const adminPaths = ['/admin', '/form-editor'];
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
@@ -30,7 +33,7 @@ export async function middleware(request) {
     await jwtVerify(token, secret);
 
     // For admin-only routes
-    if (pathname.startsWith('/admin')) {
+    if (adminPaths.some(path => pathname.startsWith(path))) {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (!payload.isAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url));

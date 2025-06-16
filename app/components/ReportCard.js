@@ -82,7 +82,7 @@ const formatStatus = (status) => {
 
 export default function ReportCard({ report, variant = 'default' }) {
   const router = useRouter();
-  const { refresh: refreshReports, deleteReport } = useReports();
+  const { refresh: refreshReports, deleteReport, updateReport } = useReports();
 
   // Determine the size and layout based on variant
   const sizeClasses = {
@@ -118,23 +118,10 @@ export default function ReportCard({ report, variant = 'default' }) {
   const handleReopen = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/reports/${report.interactionID}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...report,
-          status: 'UNRESOLVED'
-        }),
+      await updateReport(report.interactionID, {
+        ...report,
+        status: 'UNRESOLVED'
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to reopen report');
-      }
-
-      // Refresh the reports data
-      await refreshReports();
     } catch (error) {
       console.error('Error reopening report:', error);
     }
@@ -152,65 +139,57 @@ export default function ReportCard({ report, variant = 'default' }) {
   };
 
   return (
-    <div 
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 overflow-hidden"
-    >
-      <div className={sizeClasses[variant]}>
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className={`font-semibold text-gray-800 ${textClasses[variant].title}`}>
-              {report.studentName}
-            </h3>
-            <p className={`text-gray-600 mt-0.5 ${textClasses[variant].subtitle}`}>
-              {formatInteractionType(report.interaction)}
-              {report.interaction === 'INFRACTION' && report.infraction && (
-                <span className="ml-1 text-gray-500">
-                  - {formatInfractionType(report.infraction)}
-                </span>
-              )}
-            </p>
-          </div>
-          <span className={`px-1.5 py-0.5 ${textClasses[variant].subtitle} font-medium rounded-full ${statusColors[report.status]}`}>
-            {formatStatus(report.status)}
-          </span>
+    <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 ${sizeClasses[variant]}`}>
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className={`font-semibold ${textClasses[variant].title} text-gray-900`}>
+            {report.studentName || report.studentNumber || 'Unknown Student'}
+          </h3>
+          <p className={`${textClasses[variant].subtitle} text-gray-500`}>
+            {report.studentNumber}
+          </p>
         </div>
-        <div className="h-px bg-gray-200 my-2"></div>
-        <div className={`text-gray-600 ${textClasses[variant].content}`}>
-          <p className="line-clamp-2">{report.notes}</p>
-          {report.intervention && report.intervention !== 'NONE' && (
-            <p className="mt-1 text-gray-500">
-              Intervention: {formatInterventionType(report.intervention)}
-            </p>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[report.status]}`}>
+          {report.status}
+        </span>
+      </div>
+      
+      <div className="mb-2">
+        <p className={`${textClasses[variant].content} text-gray-700`}>
+          <span className="font-medium">Type:</span> {formatInteractionType(report.interaction)}
+        </p>
+        {report.notes && (
+          <p className={`${textClasses[variant].content} text-gray-700 mt-1 line-clamp-2`}>
+            {report.notes}
+          </p>
+        )}
+      </div>
+      
+      <div className={`flex justify-between items-center ${textClasses[variant].footer} text-gray-500`}>
+        <div>
+          <p>{new Date(report.interactionTimestamp).toLocaleDateString()}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleEdit}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            Edit
+          </button>
+          {report.status === 'RESOLVED' && (
+            <button
+              onClick={handleReopen}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Reopen
+            </button>
           )}
-        </div>
-        <div className="mt-2 pt-2 border-t border-gray-100">
-          <div className={`flex items-center justify-between text-gray-500 ${textClasses[variant].footer}`}>
-            <span>{report.reportedBy}</span>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handleEdit}
-                className="text-blue-600 hover:text-blue-800 hover:underline"
-              >
-                Edit
-              </button>
-              {report.status === 'RESOLVED' && (
-                <button 
-                  onClick={handleReopen}
-                  className="text-yellow-600 hover:text-yellow-800 hover:underline"
-                >
-                  Reopen
-                </button>
-              )}
-              <button
-                onClick={handleDelete}
-                className="text-red-600 hover:text-red-800 hover:underline"
-                title="Delete report"
-              >
-                <TrashIcon className="w-4 h-4" />
-              </button>
-              <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
+          <button
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-800"
+          >
+            <TrashIcon className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

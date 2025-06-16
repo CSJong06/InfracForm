@@ -1,19 +1,36 @@
 "use client";
-import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon, UsersIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon, UsersIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-
-const navLinks = [
-  { name: 'History', icon: ClockIcon, href: '/dashboard' },
-  { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
-  { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
-  { name: 'Students', icon: AcademicCapIcon, href: '/students' },
-  { name: 'Users', icon: UsersIcon, href: '/users' },
-];
+import { useState, useEffect } from 'react';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        setIsAdmin(data?.isAdmin || false);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+    checkAdminStatus();
+  }, []);
+
+  const navLinks = [
+    { name: 'History', icon: ClockIcon, href: '/dashboard' },
+    { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
+    { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
+    ...(isAdmin ? [{ name: 'Edit Form', icon: PencilSquareIcon, href: '/form-editor' }] : []),
+    { name: 'Students', icon: AcademicCapIcon, href: '/students' },
+    { name: 'Users', icon: UsersIcon, href: '/users' },
+  ];
 
   const handleLogout = async (e) => {
     e.preventDefault();

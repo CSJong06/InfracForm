@@ -4,11 +4,13 @@ import { useTypes } from '@/lib/hooks/useTypes';
 import { useStudents } from '@/lib/hooks/useStudents';
 import { useReports } from '@/lib/hooks/useReports';
 import { DisplayToCodeMap, CodeToDisplayMap } from '@/lib/constants/interactionTypes';
+import { useRouter } from 'next/navigation';
 
 export default function ReportFormModal({ open, onClose, report = null }) {
   const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes();
   const { students = [], loading: studentsLoading, error: studentsError } = useStudents();
   const { refresh: refreshReports, deleteReport } = useReports();
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [formData, setFormData] = useState({
     interaction: '',
@@ -178,7 +180,7 @@ export default function ReportFormModal({ open, onClose, report = null }) {
       const report = await response.json();
       console.log('Report created successfully:', report);
       onClose();
-      window.location.reload();
+      router.refresh();
     } catch (err) {
       console.error('Error creating report:', err);
       setError(err.message || 'Failed to create report. Please try again.');
