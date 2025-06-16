@@ -3,6 +3,9 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import mongoose from 'mongoose';
 import Report from '../lib/models/Report.js';
+import InteractionType from '../lib/models/InteractionType.js';
+import Student from '../lib/models/Student.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Get the directory name of the current module
 const __filename = fileURLToPath(import.meta.url);
@@ -11,25 +14,25 @@ const __dirname = dirname(__filename);
 // Load environment variables from .env.local
 config({ path: resolve(__dirname, '../.env.local') });
 
-// Interaction type mapping
-const interactionTypes = {
-  'IS': 'Information Sharing',
-  'PLCI': 'Parent Liaison Check-In',
-  '21CCI': '21st Century Check-In',
-  'ACI': 'Admin Check-In',
-  'SM': 'Student of the Month',
-  'ACG': 'Advisory Check-in with Guardian',
-  'CG': 'Check-in with Guardian',
-  'CC': 'Counselor Check-in',
-  'SOOC': 'Studio One-on-One Conference',
-  'BSSC': 'BSS Check-in',
-  'AOOC': 'Advisory One-on-One Conference',
-  'D': 'Deleted log',
-  'I': 'Infraction',
-  'AT': 'Attendance Tracking',
-  'CS': 'Check-in with Student',
-  'S': 'Shout-out'
-};
+// Interaction type codes - must match exactly with the database
+const interactionTypes = [
+  'SHOUT_OUT',
+  'CHECK_IN_WITH_GUARDIAN',
+  'CHECK_IN_WITH_STUDENT',
+  'ATTENDANCE_TRACKING',
+  'PARENT_LIAISON_CHECK_IN',
+  'BSS_CHECK_IN',
+  'ADVISORY_ONE_ON_ONE_CONFERENCE',
+  'ADVISORY_CHECK_IN_WITH_GUARDIAN',
+  'INFRACTION',
+  'INFORMATION_SHARING',
+  'DELETED_LOG',
+  'ADMIN_CHECK_IN',
+  'STUDENT_OF_THE_MONTH',
+  'COUNSELOR_CHECK_IN',
+  'STUDIO_ONE_ON_ONE_CONFERENCE',
+  'TWENTY_FIRST_CENTURY_CHECK_IN'
+];
 
 const infractionTypes = {
   'CUT_CLASS': 'cut class or >15min late',
@@ -39,23 +42,31 @@ const infractionTypes = {
   'LEAVING_WITHOUT_PERMISSION': 'leaving class without permission',
   'MISUSE_OF_HALLPASS': 'misuse of hallpass',
   'TARDINESS': 'tardiness to class',
-  'MINOR_VANDALISM': 'minor vandalism'
+  'MINOR_VANDALISM': 'minor vandalism',
+  'NONE': 'NONE'
 };
 
-const interventionTypes = {
-  'NONE': 'NONE',
-  'VERBAL_WARNING': 'VERBAL_WARNING',
-  'WRITTEN_WARNING': 'WRITTEN_WARNING',
-  'PARENT_CONTACT': 'PARENT_CONTACT',
-  'ADMINISTRATIVE': 'ADMINISTRATIVE'
-};
-
-const studentNumbers = [
-  '123456',
-  '234567',
-  '345678',
-  '456789',
-  '567890'
+// Use only allowed intervention values from the Report schema
+const interventionTypes = [
+  'NONE',
+  'EMAILED_PARENT',
+  'CALLED_HOME_LEFT_MESSAGE',
+  'CALLED_HOME_SPOKE',
+  'PARENT_MEETING',
+  'CALLED_HOME_NO_ANSWER',
+  'GROUP_RESTORATIVE_CIRCLE',
+  'DOOR_CONVERSATIONS',
+  'CHECK_IN',
+  'TEACHER_STRATEGY',
+  'CALLED_HOME_DISCONNECTED',
+  'ADVISOR_COUNSELOR_REFERRAL',
+  'LETTER_SENT_HOME',
+  'SAP_REFERRAL',
+  'INDIVIDUAL_RESTORATIVE_CONFERENCE',
+  'HOME_VISIT',
+  'GUIDANCE_COUNSELING',
+  'OUT_OF_CLASS_REFLECTION',
+  'CAREER_COLLEGE_COUNSELING'
 ];
 
 const submitterEmails = [
@@ -67,16 +78,21 @@ const submitterEmails = [
 ];
 
 const notes = [
-  'Student was late to class by 15 minutes.',
-  'Excellent participation in group discussion.',
-  'Parent meeting scheduled for next week.',
-  'Student needs additional support with homework.',
-  'Outstanding improvement in behavior.',
-  'Concerns about attendance patterns.',
+  'Student showed excellent participation in class discussion.',
+  'Parent meeting scheduled for next week to discuss academic progress.',
+  'Student was 15 minutes late to class.',
+  'Outstanding improvement in behavior and class participation.',
+  'Concerns about recent attendance patterns.',
   'Great leadership shown in group project.',
-  'Needs to improve class participation.',
+  'Needs additional support with homework completion.',
+  'Parent requested follow-up meeting.',
   'Excellent work on recent assignment.',
-  'Parent requested follow-up meeting.'
+  'Student needs to improve class participation.',
+  'Positive behavior change observed.',
+  'Academic concerns discussed with student.',
+  'Parent contacted regarding attendance.',
+  'Student of the month nomination submitted.',
+  'Counseling session completed successfully.'
 ];
 
 function generateRandomDate(start, end) {
@@ -84,8 +100,7 @@ function generateRandomDate(start, end) {
 }
 
 function getRandomInteraction() {
-  const codes = Object.keys(interactionTypes);
-  return codes[Math.floor(Math.random() * codes.length)];
+  return interactionTypes[Math.floor(Math.random() * interactionTypes.length)];
 }
 
 function getRandomInfraction() {
@@ -94,11 +109,35 @@ function getRandomInfraction() {
 }
 
 function getRandomIntervention() {
-  const codes = Object.keys(interventionTypes);
-  return codes[Math.floor(Math.random() * codes.length)];
+  return interventionTypes[Math.floor(Math.random() * interventionTypes.length)];
 }
 
-function generateTestReports() {
+async function ensureInteractionTypes() {
+  // Create interaction types if they don't exist
+  for (const type of interactionTypes) {
+    await InteractionType.findOneAndUpdate(
+      { name: type },
+      { 
+        name: type,
+        displayName: type.replace(/_/g, ' '),
+        isActive: true,
+        createdBy: 'system',
+        updatedBy: 'system'
+      },
+      { upsert: true }
+    );
+  }
+}
+
+async function getActiveStudents() {
+  const students = await Student.find({ isActive: true });
+  if (students.length === 0) {
+    throw new Error('No active students found in the database. Please add some students first.');
+  }
+  return students;
+}
+
+async function generateTestReports(students) {
   const reports = [];
   const startDate = new Date(2024, 0, 1); // January 1, 2024
   const endDate = new Date(); // Current date
@@ -107,20 +146,23 @@ function generateTestReports() {
     const interactionTimestamp = generateRandomDate(startDate, endDate);
     const entryTimestamp = new Date(interactionTimestamp.getTime() + Math.random() * 3600000); // Within 1 hour
     const isInfraction = Math.random() > 0.5;
-    const interactionCode = isInfraction ? 'I' : getRandomInteraction();
+    const interactionCode = isInfraction ? 'INFRACTION' : getRandomInteraction();
+    
+    // Select a random student from the active students
+    const randomStudent = students[Math.floor(Math.random() * students.length)];
     
     const report = {
-      studentNumber: studentNumbers[Math.floor(Math.random() * studentNumbers.length)],
+      studentNumber: randomStudent.studentId,
       entryTimestamp,
       submitterEmail: submitterEmails[Math.floor(Math.random() * submitterEmails.length)],
-      interaction: interactionTypes[interactionCode],
+      interaction: interactionCode,
       interactioncode: interactionCode,
       infraction: isInfraction ? getRandomInfraction() : 'NONE',
       intervention: isInfraction ? getRandomIntervention() : 'NONE',
       notes: notes[Math.floor(Math.random() * notes.length)],
       interactionTimestamp,
       status: Math.random() > 0.5 ? 'RESOLVED' : 'UNRESOLVED',
-      interactionID: `2_${Math.random().toString(36).substring(2, 15)}`
+      interactionID: uuidv4()
     };
 
     reports.push(report);
@@ -135,12 +177,22 @@ async function main() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to MongoDB');
 
+    // Ensure interaction types exist
+    console.log('Ensuring interaction types exist...');
+    await ensureInteractionTypes();
+    console.log('Interaction types verified');
+
+    // Get active students
+    console.log('Fetching active students...');
+    const students = await getActiveStudents();
+    console.log(`Found ${students.length} active students`);
+
     // Clear existing reports
     await Report.deleteMany({});
     console.log('Cleared existing reports');
 
     // Generate and insert test reports
-    const testReports = generateTestReports();
+    const testReports = await generateTestReports(students);
     await Report.insertMany(testReports);
     console.log('Inserted 15 test reports');
 

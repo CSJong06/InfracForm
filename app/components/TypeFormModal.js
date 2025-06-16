@@ -11,7 +11,7 @@ export default function TypeFormModal({
   const [formData, setFormData] = useState({
     name: '',
     displayName: '',
-    shorthandCode: '', // Added for intervention types
+    shorthandCode: '', // Added for interaction types
     isActive: true
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -22,14 +22,14 @@ export default function TypeFormModal({
       setFormData({
         name: type.name,
         displayName: type.displayName,
-        shorthandCode: type.shorthandCode || '', // Added for intervention types
+        shorthandCode: type.shorthandCode || '', // Added for interaction types
         isActive: type.isActive !== false
       });
     } else {
       setFormData({
         name: '',
         displayName: '',
-        shorthandCode: '', // Added for intervention types
+        shorthandCode: '', // Added for interaction types
         isActive: true
       });
     }
@@ -94,7 +94,7 @@ export default function TypeFormModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1">
-              Name (Internal)
+              Name
             </label>
             <input
               type="text"
@@ -102,11 +102,10 @@ export default function TypeFormModal({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-900 placeholder-gray-500"
-              placeholder="e.g., NEW_TYPE"
-              disabled={!!type} // Can't change name after creation
+              placeholder="e.g., CHECK_IN_WITH_GUARDIAN"
             />
             <p className="mt-1 text-xs text-gray-500">
-              This is the internal identifier. Use uppercase with underscores.
+              Internal name used in the system (uppercase with underscores)
             </p>
           </div>
 
@@ -120,11 +119,14 @@ export default function TypeFormModal({
               value={formData.displayName}
               onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-900 placeholder-gray-500"
-              placeholder="e.g., New Type"
+              placeholder="e.g., Check-in with Guardian"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Name shown to users in the interface
+            </p>
           </div>
 
-          {typeCategory === 'intervention' && (
+          {typeCategory === 'interaction' && (
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Shorthand Code
@@ -135,11 +137,11 @@ export default function TypeFormModal({
                 value={formData.shorthandCode}
                 onChange={(e) => setFormData({ ...formData, shorthandCode: e.target.value.toUpperCase() })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm text-gray-900 placeholder-gray-500"
-                placeholder="e.g., ABC"
+                placeholder="e.g., CG"
                 maxLength={3}
               />
               <p className="mt-1 text-xs text-gray-500">
-                A short code (max 3 characters) used to identify this intervention type.
+                A short code (max 3 characters) used to identify this interaction type in exports.
               </p>
             </div>
           )}

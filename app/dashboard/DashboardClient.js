@@ -7,7 +7,7 @@ import FloatingActionButton from '../components/FloatingActionButton';
 import ReportFormModal from '../components/ReportFormModal';
 import ClearDatabaseModal from '../components/ClearDatabaseModal';
 import { useReports } from '@/lib/hooks/useReports';
-import { MagnifyingGlassIcon, TrashIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, TrashIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 export default function DashboardClient({ session }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,16 +60,46 @@ export default function DashboardClient({ session }) {
     });
   };
 
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/reports/export', {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export reports');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reports-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export reports. Please try again.');
+    }
+  };
+
   const filteredReports = reports.filter(report => {
     // Search term filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        report.studentName?.toLowerCase().includes(searchLower) ||
-        report.studentNumber?.toLowerCase().includes(searchLower) ||
-        report.notes?.toLowerCase().includes(searchLower) ||
-        report.reportedBy?.toLowerCase().includes(searchLower);
-      if (!matchesSearch) return false;
+      const studentName = report.studentName?.toLowerCase() || '';
+      const studentNumber = report.studentNumber?.toLowerCase() || '';
+      const notes = report.notes?.toLowerCase() || '';
+      const reporter = report.reportedBy?.toLowerCase() || '';
+      
+      if (!studentName.includes(searchLower) &&
+          !studentNumber.includes(searchLower) &&
+          !notes.includes(searchLower) &&
+          !reporter.includes(searchLower)) {
+        return false;
+      }
     }
 
     // Status filter
@@ -91,9 +121,7 @@ export default function DashboardClient({ session }) {
       switch (filters.dateRange) {
         case 'today':
           const startOfDay = new Date(today);
-          const endOfDay = new Date(today);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (reportDate < startOfDay || reportDate > endOfDay) return false;
+          if (reportDate < startOfDay) return false;
           break;
         case 'week':
           const startOfWeek = new Date(today);
@@ -108,12 +136,8 @@ export default function DashboardClient({ session }) {
           if (filters.startDate && new Date(report.interactionTimestamp) < new Date(filters.startDate)) {
             return false;
           }
-          if (filters.endDate) {
-            const endDate = new Date(filters.endDate);
-            endDate.setHours(23, 59, 59, 999);
-            if (new Date(report.interactionTimestamp) > endDate) {
-              return false;
-            }
+          if (filters.endDate && new Date(report.interactionTimestamp) > new Date(filters.endDate)) {
+            return false;
           }
           break;
       }
@@ -130,6 +154,13 @@ export default function DashboardClient({ session }) {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Dashboard</h1>
             <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 flex items-center gap-2 text-sm text-gray-700"
+              >
+                <ArrowDownTrayIcon className="w-4 h-4" />
+                Export CSV
+              </button>
               <div className="relative">
                 <input
                   type="text"
