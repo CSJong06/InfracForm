@@ -57,7 +57,7 @@ export async function POST(request) {
     }
 
     // Validate infraction-specific fields
-    if (data.interaction === 'Infraction') {
+    if (data.interaction === 'INFRACTION') {
       if (!data.infraction) {
         return NextResponse.json(
           { error: 'Infraction type is required for infraction reports' },

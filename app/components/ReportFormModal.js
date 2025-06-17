@@ -32,6 +32,10 @@ export default function ReportFormModal({ open, onClose, report = null }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [summaryMessage, setSummaryMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
 
   useEffect(() => {
     // Fetch session data when component mounts
@@ -195,6 +199,7 @@ export default function ReportFormModal({ open, onClose, report = null }) {
 
       const report = await response.json();
       console.log('Report created successfully:', report);
+      resetForm();
       onClose();
       router.refresh();
     } catch (err) {
@@ -219,6 +224,7 @@ export default function ReportFormModal({ open, onClose, report = null }) {
     setError(null);
     setPage(1);
     setShowConfirmation(false);
+    setSummary(null);
   };
 
   const renderProgressDots = () => {
@@ -295,6 +301,46 @@ export default function ReportFormModal({ open, onClose, report = null }) {
     onClose();
   };
 
+  const handleGenerate = async () => {
+    if (selectedStudents.length === 0) {
+      setError('Please select a student first.');
+      return;
+    }
+    setIsLoading(true);
+    const studentId = selectedStudents[0].studentId;
+    try {
+      // First get the student summary
+      const response = await fetch(`/api/students/${studentId}/summary`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch student summary');
+      }
+      const data = await response.json();
+      setSummary(data);
+      const message = `You're writing a report about ${data.studentName}. This student has ${data.totalReports} reports made about them, and ${data.infractionCount} of them are infractions.${data.infractionCount > 0 ? ` These infractions consist of ${data.infractionTypes.join(', ')}.` : ''}`;
+      setSummaryMessage(message);
+
+      // Now send to AI for processing
+      const aiResponse = await fetch('/api/ai/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!aiResponse.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const aiData = await aiResponse.json();
+      setAiResponse(aiData.response);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Debug useEffect for dropdown value
   useEffect(() => {
     if (page === 2) {
@@ -340,8 +386,8 @@ export default function ReportFormModal({ open, onClose, report = null }) {
       {/* Dimmed background */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xl mx-auto p-6 z-10 flex flex-col gap-4 min-h-[28rem]">
-        <div className="flex items-center justify-between mb-2">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xl mx-auto p-6 z-10 flex flex-col gap-4 max-h-[90vh] min-h-[600px] overflow-y-auto custom-scrollbar">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">
             {report ? 'Edit Report' : 'New Report'}
           </h2>
@@ -433,9 +479,6 @@ export default function ReportFormModal({ open, onClose, report = null }) {
           <>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Report Details</h2>
-              <button onClick={handleCancel} className="text-gray-500 hover:text-gray-700">
-                <XMarkIcon className="w-6 h-6" />
-              </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-3">
@@ -451,7 +494,7 @@ export default function ReportFormModal({ open, onClose, report = null }) {
                     <option value="">Select an interaction type</option>
                     {interactionTypes.map((type) => (
                       <option key={type.name} value={type.name}>
-                        {type.displayName}
+                        {formatDisplayText(type.displayName)}
                       </option>
                     ))}
                   </select>
@@ -563,12 +606,21 @@ export default function ReportFormModal({ open, onClose, report = null }) {
                 <div className="flex items-center gap-2">
                   {renderProgressDots()}
                 </div>
-                <button 
-                  className="w-fit bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold shadow text-sm"
-                  onClick={() => setShowConfirmation(true)}
-                >
-                  Submit
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    className="w-fit bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-semibold shadow text-sm flex items-center gap-2"
+                    onClick={handleGenerate}
+                  >
+                    <SparklesIcon className="w-5 h-5" />
+                    Generate
+                  </button>
+                  <button 
+                    className="w-fit bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold shadow text-sm"
+                    onClick={() => setShowConfirmation(true)}
+                  >
+                    Submit
+                  </button>
+                </div>
               </div>
             </div>
           </>
@@ -650,6 +702,27 @@ export default function ReportFormModal({ open, onClose, report = null }) {
                   {isSubmitting ? 'Submitting...' : 'Continue'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="mt-4 flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : summary && (
+          <div className="mt-4 flex-1">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Summary</h3>
+            <div className="p-4 bg-gray-100 rounded-lg h-full">
+              <p className="text-gray-800">{summaryMessage}</p>
+              {aiResponse && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-md font-semibold text-gray-700 mb-2">AI Analysis</h4>
+                  <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    <p className="text-gray-700 whitespace-pre-wrap">{aiResponse}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
