@@ -1,509 +1,392 @@
-### Making a Request
+# Infraction Form Application Documentation
 
-To make a request to the Playlab API, you'll need to use your API key for authentication. Use your API key and project ID to create a new conversation. Here's an example using `Node.js` and the `axios` library.
+## Table of Contents
 
-const axios = require("axios");
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Database Design](#database-design)
+4. [API Reference](#api-reference)
+5. [Authentication](#authentication)
+6. [Frontend Components](#frontend-components)
+7. [Deployment Guide](#deployment-guide)
+8. [Troubleshooting](#troubleshooting)
 
-const API_KEY = "your_api_key_here";
-const PROJECT_ID = "your_project_id_here";
-const API_BASE_URL = "https://www.playlab.ai/api/v1";
+## Overview
 
-async function createConversation() {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/projects/${PROJECT_ID}/conversations`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    return response.data.conversation.id;
-  } catch (error) {
-    console.error("Error creating conversation:", error.response?.data || error.message);
-    throw error;
+The Infraction Form Application is a comprehensive student behavior management system designed for educational institutions. It allows teachers and administrators to track student interactions, infractions, and interventions in a centralized, searchable database.
+
+### Key Features
+
+- **Multi-User Support**: Role-based access control (Admin/User)
+- **Student Management**: Complete student lifecycle management
+- **Report Tracking**: Comprehensive infraction and interaction reporting
+- **Data Export**: CSV export functionality for reporting
+- **Real-time Updates**: React Query for efficient data synchronization
+- **AI Integration**: Optional AI-powered processing capabilities
+
+## Architecture
+
+### Technology Stack
+
+```
+Frontend:
+├── Next.js 15.3.3 (App Router)
+├── React 19
+├── Tailwind CSS
+└── TanStack React Query
+
+Backend:
+├── Next.js API Routes
+├── MongoDB with Mongoose
+├── JWT Authentication
+└── Playlab AI Integration
+
+Infrastructure:
+├── MongoDB Atlas (recommended)
+├── Vercel (deployment)
+└── Environment-based configuration
+```
+
+### Project Structure
+
+```
+infracform/
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── components/        # React components
+│   ├── dashboard/         # Dashboard pages
+│   ├── students/          # Student management
+│   ├── reports/           # Report management
+│   ├── users/             # User management
+│   └── form-editor/       # Form type management
+├── lib/                   # Shared utilities
+│   ├── models/           # Mongoose models
+│   ├── hooks/            # Custom React hooks
+│   └── constants/        # Application constants
+├── scripts/              # Database scripts
+├── public/               # Static assets
+└── middleware.js         # Authentication middleware
+```
+
+## Database Design
+
+### Entity Relationship Diagram
+
+```
+User (1) ──── (N) Report
+Student (1) ──── (N) Report
+InteractionType (1) ──── (N) Report
+InfractionType (1) ──── (N) Report
+InterventionType (1) ──── (N) Report
+```
+
+### Schema Details
+
+#### User Model
+```javascript
+{
+  email: String (required, unique),
+  password: String (hashed),
+  firstName: String,
+  lastName: String,
+  isAdmin: Boolean (default: false),
+  isActive: Boolean (default: true)
+}
+```
+
+#### Student Model
+```javascript
+{
+  studentId: String (required, unique, 6 digits),
+  firstName: String (required),
+  lastName: String (required),
+  isActive: Boolean (default: true)
+}
+```
+
+#### Report Model
+```javascript
+{
+  interactionID: String (required, unique),
+  studentNumber: String (required, 6 digits),
+  entryTimestamp: Date (default: now),
+  submitterEmail: String (required),
+  interaction: String (required, references InteractionType),
+  interactioncode: String (required),
+  infraction: String (enum, required if interaction is 'INFRACTION'),
+  intervention: String (enum, default: 'NONE'),
+  notes: String,
+  interventionNotes: String,
+  interactionTimestamp: Date (required),
+  editUrl: String,
+  status: String (enum: 'RESOLVED', 'UNRESOLVED', default: 'UNRESOLVED')
+}
+```
+
+## API Reference
+
+### Authentication Endpoints
+
+#### POST /api/auth/login
+Authenticate a user and return a JWT token.
+
+**Request Body:**
+  ```json
+  {
+  "email": "user@example.com",
+  "password": "password123"
+  }
+  ```
+
+**Response:**
+  ```json
+  {
+  "success": true,
+  "user": {
+    "email": "user@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "isAdmin": false
   }
 }
+```
 
-// Usage
-createConversation().then((conversationId) => {
-  console.log("New conversation created with ID:", conversationId);
-});
+#### POST /api/auth/logout
+Logout the current user by clearing the JWT cookie.
 
-Once you have a conversation ID, you can send messages and receive streaming responses. The Playlab API uses server-sent events (SSE) for streaming responses, which allows for real-time display of AI responses. Here's how to handle this with axios:
+#### GET /api/auth/session
+Get the current user session information.
 
-async function sendMessage(conversationId, message) {
-  try {
-    const response = await axios.post(
-      `${API_BASE_URL}/projects/${PROJECT_ID}/conversations/${conversationId}/messages`,
-      { input: { message: message } },
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        responseType: "stream",
-      }
-    );
+### Reports Endpoints
 
-    return new Promise((resolve, reject) => {
-      let fullContent = "";
-      response.data.on("data", (chunk) => {
-        const lines = chunk.toString().split("\n");
-        lines.forEach((line) => {
-          if (line.startsWith("data:")) {
-            try {
-              const data = JSON.parse(line.slice(5));
-              if (data.delta) {
-                fullContent += data.delta;
-                process.stdout.write(data.delta); // This will print the response in real-time
-              }
-            } catch (e) {
-              // Ignore parsing errors
-            }
-          }
-        });
-      });
+#### GET /api/reports
+Get all reports with optional filtering.
 
-      response.data.on("end", () => {
-        console.log("\n"); // Add a newline after the streamed response
-        resolve(fullContent);
-      });
+**Query Parameters:**
+- `status`: Filter by status ('RESOLVED' or 'UNRESOLVED')
 
-      response.data.on("error", (error) => {
-        reject(error);
-      });
-    });
-  } catch (error) {
-    console.error("Error sending message:", error.response?.data || error.message);
-    throw error;
+**Response:**
+  ```json
+[
+  {
+    "interactionID": "12345",
+    "studentNumber": "123456",
+    "submitterEmail": "teacher@school.com",
+    "interaction": "INFRACTION",
+    "infraction": "TARDINESS",
+    "status": "UNRESOLVED",
+    "entryTimestamp": "2024-01-15T10:30:00Z"
   }
+]
+```
+
+#### POST /api/reports
+Create a new report.
+
+**Request Body:**
+  ```json
+  {
+  "studentNumber": "123456",
+  "submitterEmail": "teacher@school.com",
+  "interaction": "INFRACTION",
+  "interactionTimestamp": "2024-01-15T10:30:00Z",
+  "infraction": "TARDINESS",
+  "notes": "Student arrived 15 minutes late"
 }
-
-// Usage
-const conversationId = "your_conversation_id_here";
-sendMessage(conversationId, "Hello, AI!").then((response) => {
-  console.log("Full AI response:", response);
-});
-
-### Complete Example
-
-Here's a complete example that creates a conversation and allows for an interactive chat session:
-
-### Setup
-
-Create a new directory for your project and navigate to it:
-mkdir playlab-chat-example
-cd playlab-chat-example
-
-Initialize a new Node.js project:
-
-```bash
-npm init -y
 ```
 
-Install the required packages:
+### Students Endpoints
 
-```bash
-npm install axios readline
-```
+#### GET /api/students
+Get all active students.
 
-### Requirements
+#### POST /api/students
+Create a new student.
 
-Before running this example, ensure you have:
-
-1. Node.js installed (version 14.0.0 or later recommended)
-2. The following npm packages installed in your project:
-    - axios
-    - readline
-
-- readline
-
-### Code
-
-Create a new file named `playlab-chat.js` in your project directory and add the following code:
-
-const axios = require("axios");
-const readline = require("readline");
-
-const API_KEY = "your_api_key_here";
-const PROJECT_ID = "your_project_id_here";
-const API_BASE_URL = "https://www.playlab.ai/api/v1";
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-// [Include the createConversation and sendMessage functions from above here]
-
-async function startChat() {
-  console.log("Creating a new conversation...");
-  const conversationId = await createConversation();
-  console.log(`Conversation created with ID: ${conversationId}`);
-  console.log(
-    "You can start chatting now. Type your messages and press Enter to send."
-  );
-  console.log('Type "exit" to end the conversation.\n');
-
-  rl.setPrompt("You: ");
-  rl.prompt();
-
-  rl.on("line", async (input) => {
-    if (input.toLowerCase() === "exit") {
-      console.log("Ending conversation. Goodbye!");
-      rl.close();
-      process.exit(0);
-    }
-
-    console.log("\nAI: ");
-    await sendMessage(conversationId, input);
-    console.log("\n");
-
-    rl.prompt();
-  });
+**Request Body:**
+  ```json
+  {
+  "studentId": "123456",
+  "firstName": "Jane",
+  "lastName": "Smith"
 }
-
-startChat();
-
-### Usage
-
-To use this example:
-
-1. Replace `'your_api_key_here'` and `'your_project_id_here'` with your actual API key and project ID in the `playlab-chat.js` file.
-2. Open a terminal, navigate to your project directory, and run the script:
-
-```bash
-node playlab-chat.js
 ```
 
-This will start an interactive chat session where you can send messages to the AI and receive responses in real-time.
+#### POST /api/students/bulk-import
+Bulk import students from CSV file.
 
-# Beta API Documentation
+**Request:** Multipart form data with CSV file
 
-## Create Conversation
+### Form Types Endpoints
 
-```
-POST /projects/{PROJECT_ID}/conversations
-```
+#### GET /api/interaction-types
+Get all active interaction types.
 
-### Headers
+#### GET /api/infraction-types
+Get all active infraction types.
 
-- `content-type` (required)
+#### GET /api/intervention-types
+Get all active intervention types.
 
-  You can use `application/json` or `application/x-www-form-urlencoded`
+## Authentication
 
-- `authorization` (required)
+### JWT Implementation
 
-  Expected format `Bearer {API_KEY}`
+The application uses JWT tokens stored in HTTP-only cookies for security.
 
-### Body Parameters
-
-#### For `application/json`
-
-- `instructionVariables` (optional)
-
-  An object containing the instruction variables for the conversation.
-
-  ```json
-  {
-    "instructionVariables": {
-      "variable1": "value1",
-      "variable2": "value2"
-    }
-  }
-  ```
-
-#### For `application/x-www-form-urlencoded`
-
-- `instructionVariables` (optional)
-
-  A list of the instruction variables for the conversation.
-
-  ```
-  instructionVariables.variable1=value1&
-  instructionVariables.variable2=value2
-  ```
-
-### Responses
-
-- `200 OK`
-
-  Conversation created successfully.
-
-  Example:
-
-  ```json
-  {
-    "conversation": {
-      "id": "clzilskag0006j77wtm6c5xjy",
-      "name": null,
-      "provider": "openai",
-      "mode lName": "gpt-40-2024-05-13",
-      "maxTokens": 4000,
-      "temperature": 0.7,
-      "contextStrategy": "lifo",
-      "isImageInputEnabled": false,
-      "isImageInputWithPeopleEnabled": false,
-      "instructionVariableValues": [],
-      "inputTokenCount": 0,
-      "outputTokenCount": 0,
-      "createdAt": "2024-08-06T15:57:04.1212",
-      "updatedAt": "2024-08-06T15:57:04.1212",
-      "userId": null,
-      "datasetId": "clzh4odv60003tv43qvj6abin",
-      "promptId": "clzh4odub0000tv43jdxzrgk5",
-      "projectId": "clzcsxmoa001agbo6t95rf01j"
-    }
-  }
-  ```
-
-- `401 Unauthorized`
-
-  Examples:
-
-  ```json
-  {
-    "error": "Authorization header required."
-  }
-  ```
-
-  ```json
-  {
-    "error": "Bearer token required."
-  }
-  ```
-
-  ```json
-  {
-    "error": "Invalid API key."
-  }
-  ```
-
-  ```json
-  {
-    "error": "Expired API key."
-  }
-  ```
-
-- `400 Bad Request`
-
-  Example:
-
-  ```json
-  {
-    "error": {
-      "issues": [
-        {
-          "code": "invalid_type",
-          "expected": "object",
-          "received": "string",
-          "path": ["instructionVariables"],
-          "message": "Expected object, received string"
-        }
-      ]
-    }
-  }
-  ```
-
-## Send Message in a Conversation
-
-```
-POST /projects/{PROJECT_ID}/conversations/{CONVERSATION_ID}/messages
+**Token Structure:**
+```javascript
+{
+  "email": "user@example.com",
+  "isAdmin": false,
+  "iat": 1642234567,
+  "exp": 1642320967
+}
 ```
 
-### Headers
+### Middleware Protection
 
-- `content-type` (required)
+The `middleware.js` file protects all routes except:
+- `/` (login page)
+- `/api/auth/login`
 
-  You can use `application/json`, `application/x-www-form-urlencoded` or `multipart/form-data`.
+Admin-only routes:
+- `/admin/*`
+- `/form-editor/*`
 
-- `authorization` (required)
+### Role-Based Access Control
 
-  Expected format `Bearer {API_KEY}`
+- **Admin Users**: Full access to all features including user management and form editing
+- **Regular Users**: Can create and view reports, manage students
 
-### Body Parameters
+## Frontend Components
 
-#### For `application/json`
+### Core Components
 
-- `input.message` (required)
+#### ReportFormModal
+Large modal component (732 lines) for creating and editing reports.
 
-  Message to send in the conversation.
+**Key Features:**
+- Dynamic form fields based on interaction type
+- Student search and validation
+- Real-time form validation
+- File upload support
 
-  Example:
+#### DashboardClient
+Main dashboard component with statistics and recent activity.
 
-  ```json
-  {
-    "input": {
-      "message": "Message"
-    }
-  }
-  ```
+**Features:**
+- Recent infractions display
+- Infraction history charts
+- Quick action buttons
+- Real-time data updates
 
-#### For `application/x-www-form-urlencoded`
+#### Sidebar
+Navigation component with role-based menu items.
 
-- `input.message` (required)
+### Custom Hooks
 
-  Message to send in the conversation.
+#### useReports
+Manages report data with React Query:
+- Automatic caching
+- Background updates
+- Optimistic updates
+- Error handling
 
-  Example:
+#### useStudents
+Manages student data with similar caching and update patterns.
 
-  ```
-  input.message=Message
-  ```
+## Deployment Guide
 
-#### For `multipart/form-data`
+### Environment Setup
 
-- `input.message` (optional)
+1. **Database**: Set up MongoDB Atlas cluster
+2. **Environment Variables**: Configure all required variables
+3. **Domain**: Set up custom domain (optional)
 
-  Message to send in the conversation.
+### Vercel Deployment
 
-- `file` (required)
+1. Connect your GitHub repository to Vercel
+2. Configure environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
 
-  File to send in the conversation.
+### Environment Variables
 
-- `originalFileName` (required)
-
-  Original name of the file.
-
-  Curl example:
-
-  ```
-  curl -X POST http://localhost:3000/api/v1/projects/clzcsxmoa001agbo6t95rf01j/conversations/clziksy1g000fzrwovo7cxdle/messages \
-    -H "Authorization: Bearer sk-pl-v1-org.OHGv-TvhEICz3_ZXNJByH5HLs5SDTdVqsDOLGyIoQmQ" \
-    -F "input.message=Some message" \
-    -F "originalFileName=example.txt" \
-    -F "file=@/Users/{USER_NAME}/Desktop/example.txt;type=text/plain" \
-    --verbose
-  ```
-
-### Responses
-
-- `200 OK`
-
-  Message sent successfully.
-
-  Streams the assistant response with the `content-type` header set to `text/plain`.
-
-- `401 Unauthorized`
-
-  Example:
-
-  ```json
-  {
-    "error": "Invalid API key."
-  }
-  ```
-
-- `400 Bad Request`
-
-## List Messages in a Conversation
-
-```
-GET /projects/{PROJECT_ID}/conversations/{CONVERSATION_ID}/messages
+**Required:**
+```env
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/infracform
+JWT_SECRET=your-super-secret-jwt-key
 ```
 
-### Headers
-
-- `authorization` (required)
-
-  Expected format `Bearer {API_KEY}`
-
-### Query Parameters
-
-None
-
-### Responses
-
-- `200 OK`
-
-  List of messages.
-
-  Example:
-
-  ```json
-  {
-    "messages": [
-      {
-        "id": "clziktmt8000jzrwohd0nsyo0",
-        "content": "Message A",
-        "originalContent": null,
-        "tokenCount": 2,
-        "source": "provider",
-        "rating": null,
-        "createdAt": "2024-08-06T15:29:53.8522",
-        "updatedAt": "2024-08-06T15:29:57.066Z",
-        "userId": null,
-        "conversationId": "clziksy1g000fzrwovo7cxdle",
-        "projectId": "clzcsxmoa001agbo6t95rf01j"
-      },
-      {
-        "id": "clziku065000kzrwozheexfap",
-        "content": "Message B",
-        "originalContent": null,
-        "tokenCount": 2,
-        "source": "user",
-        "rating": null,
-        "createdAt": "2024-08-06T15:30:11.1652",
-        "updatedAt": "2024-08-06T15:30:11. 165Z",
-        "userId": null,
-        "conversationId": "clziksy1g000fzrwovo7cxdle",
-        "projectId": "clzcsxmoa001agbo6t95rf01j"
-      }
-    ]
-  }
-  ```
-
-- `401 Unauthorized`
-
-  Example:
-
-  ```json
-  {
-    "error": "Invalid API key."
-  }
-  ```
-
-## Workflow Example
-
-Below is a list of cURL examples for all possible API calls. To get started, first create a new API key through the user interface and make your app public. Make sure to retrieve the app/project ID and the generated API key. Once you have these, you can use the cURL examples provided below.
-
-```sh
-# Create a new conversation with application/json
-curl -X POST "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX" \
--H "Content-Type: application/json" \
--d '{}'
-
-# Create a new conversation with x-www-form-urlencoded
-curl -X POST "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX" \
--H "Content-Type: application/x-www-form-urlencoded" \
--d ""
-
-# Send a message in a conversation with application/json
-curl -X POST "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations/clzn4kkhj0007x968gb0fbf1d/messages" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX" \
--H "Content-Type: application/json" \
--d '{"input":{"message":"Message"}}'
-
-# Send a message in a conversation with x-www-form-urlencoded
-curl -X POST "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations/clzn4kkhj0007x968gb0fbf1d/messages" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX" \
--H "Content-Type: application/x-www-form-urlencoded" \
--d "input.message=Message"
-
-# Send a message in a conversation with multipart/form-data with a file
-curl -X POST "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations/clzn4kkhj0007x968gb0fbf1d/messages" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX" \
--H "Content-Type: multipart/form-data" \
--F "input.message=Message" \
--F "file=@/Users/lukaszjagodzinski/Desktop/example.txt" \
--F "originalFileName=example.txt"
-
-# List messages in a conversation
-curl -X GET "http://localhost:3000/api/v1/projects/clzn3dowb001gphvsusvd4r69/conversations/clzn4kkhj0007x968gb0fbf1d/messages" \
--H "Authorization: Bearer sk-pl-v1-org.XXXX"
+**Optional:**
+```env
+PLAYLAB_API_KEY=your-playlab-api-key
+PLAYLAB_PROJECT_ID=your-playlab-project-id
 ```
+
+### Database Migration
+
+1. Run initialization scripts:
+   ```bash
+   node scripts/init-all-types.js
+   node scripts/create-admin.js
+   ```
+
+2. Import existing data if available
+
+## Troubleshooting
+
+### Common Issues
+
+#### Database Connection Errors
+- Verify `MONGODB_URI` is correct
+- Check network connectivity
+- Ensure MongoDB Atlas IP whitelist includes your IP
+
+#### Authentication Issues
+- Verify `JWT_SECRET` is set
+- Check cookie settings in production
+- Ensure HTTPS in production
+
+#### Build Errors
+- Clear `.next` directory
+- Reinstall dependencies
+- Check for TypeScript errors
+
+### Performance Optimization
+
+#### Database Indexes
+The application automatically creates indexes for:
+- `studentNumber` + `interactionTimestamp`
+- `status`
+- `interactionID` (unique)
+
+#### Caching Strategy
+- React Query provides client-side caching
+- MongoDB connection pooling
+- Static asset optimization via Next.js
+
+### Monitoring
+
+#### Recommended Tools
+- Vercel Analytics
+- MongoDB Atlas monitoring
+- Application error tracking (Sentry)
+
+#### Key Metrics
+- API response times
+- Database query performance
+- User session duration
+- Error rates
+
+## Support
+
+For technical support or questions:
+1. Check this documentation
+2. Review the codebase comments
+3. Contact the development team
+4. Create an issue in the repository
+
+---
+
+*Last updated: January 2024* 

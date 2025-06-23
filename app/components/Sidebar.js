@@ -1,49 +1,48 @@
-"use client";
-import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon, UsersIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+"use client"; // Mark component as client-side for Next.js
+import { ClockIcon, ExclamationCircleIcon, CheckCircleIcon, UserGroupIcon, ArrowLeftOnRectangleIcon, AcademicCapIcon, UsersIcon } from '@heroicons/react/24/outline'; // Import navigation icons
+import Link from 'next/link'; // Import Next.js Link component for navigation
+import { usePathname, useRouter } from 'next/navigation'; // Import Next.js navigation hooks
+import { useState, useEffect } from 'react'; // Import React hooks for state management and side effects
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+export default function Sidebar() { // Main sidebar navigation component
+  const pathname = usePathname(); // Get current route pathname for active link highlighting
+  const router = useRouter(); // Get Next.js router instance for programmatic navigation
+  const [isAdmin, setIsAdmin] = useState(false); // State to track user admin status
 
-  useEffect(() => {
-    const checkAdminStatus = async () => {
+  useEffect(() => { // Effect to check user admin status on component mount
+    const checkAdminStatus = async () => { // Async function to fetch admin status from API
       try {
-        const response = await fetch('/api/auth/session');
-        const data = await response.json();
-        setIsAdmin(data?.isAdmin || false);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
+        const response = await fetch('/api/auth/session'); // Make API request to get session data
+        const data = await response.json(); // Parse response JSON
+        setIsAdmin(data?.isAdmin || false); // Set admin status from response or default to false
+      } catch (error) { // Catch any errors during API request
+        console.error('Error checking admin status:', error); // Log error for debugging
+        setIsAdmin(false); // Default to non-admin on error
       }
     };
-    checkAdminStatus();
-  }, []);
+    checkAdminStatus(); // Call the admin status check function
+  }, []); // Empty dependency array means this runs once on mount
 
-  const navLinks = [
-    { name: 'History', icon: ClockIcon, href: '/dashboard' },
-    { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' },
-    { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' },
-    ...(isAdmin ? [{ name: 'Edit Form', icon: PencilSquareIcon, href: '/form-editor' }] : []),
-    { name: 'Students', icon: AcademicCapIcon, href: '/students' },
-    { name: 'Users', icon: UsersIcon, href: '/users' },
+  const navLinks = [ // Array of navigation links with conditional admin-only items
+    { name: 'History', icon: ClockIcon, href: '/dashboard' }, // Dashboard/history link
+    { name: 'Unresolved', icon: ExclamationCircleIcon, href: '/unresolved' }, // Unresolved reports link
+    { name: 'Resolved', icon: CheckCircleIcon, href: '/resolved' }, // Resolved reports link
+    { name: 'Students', icon: AcademicCapIcon, href: '/students' }, // Students management link
+    { name: 'Users', icon: UsersIcon, href: '/users' }, // Users management link
   ];
 
-  const handleLogout = async (e) => {
-    e.preventDefault();
+  const handleLogout = async (e) => { // Async function to handle user logout
+    e.preventDefault(); // Prevent default button behavior
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
+      const response = await fetch('/api/auth/logout', { // Make logout API request
+        method: 'POST', // Use POST method for logout
       });
       
-      if (response.ok) {
-        router.push('/');
+      if (response.ok) { // Check if logout was successful
+        router.push('/'); // Navigate to home page after successful logout
       }
-    } catch (error) {
-      console.error('Logout failed:', error);
+    } catch (error) { // Catch any errors during logout
+      console.error('Logout failed:', error); // Log error for debugging
     }
   };
 

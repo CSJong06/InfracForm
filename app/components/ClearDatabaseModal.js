@@ -1,26 +1,26 @@
-'use client';
+'use client'; // Mark component as client-side for Next.js
 
-import { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react'; // Import React useState hook for component state management
+import { XMarkIcon } from '@heroicons/react/24/outline'; // Import X mark icon for close button
 
-export default function ClearDatabaseModal({ open, onClose, onConfirm }) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+export default function ClearDatabaseModal({ open, onClose, onConfirm }) { // Modal component for confirming database clearing
+  const [isSubmitting, setIsSubmitting] = useState(false); // State to track submission status during clearing
+  const [error, setError] = useState(null); // State to store error messages
 
-  const handleConfirm = async () => {
+  const handleConfirm = async () => { // Async function to handle database clearing confirmation
     try {
-      setIsSubmitting(true);
-      setError(null);
-      await onConfirm();
-      onClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(true); // Set submission state to true
+      setError(null); // Clear any previous errors
+      await onConfirm(); // Call the confirmation callback function
+      onClose(); // Close the modal after successful clearing
+    } catch (err) { // Catch any errors during clearing process
+      setError(err.message); // Set error message in state
+    } finally { // Always execute this block
+      setIsSubmitting(false); // Reset submission state to false
     }
   };
 
-  if (!open) return null;
+  if (!open) return null; // Return null if modal is not open (don't render)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

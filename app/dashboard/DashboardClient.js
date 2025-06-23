@@ -1,149 +1,149 @@
-"use client";
-import { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
-import RecentInfractions from '../components/RecentInfractions';
-import InfractionHistory from '../components/InfractionHistory';
-import FloatingActionButton from '../components/FloatingActionButton';
-import ReportFormModal from '../components/ReportFormModal';
-import ClearDatabaseModal from '../components/ClearDatabaseModal';
-import { useReports } from '@/lib/hooks/useReports';
-import { MagnifyingGlassIcon, TrashIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+"use client"; // Mark this as a client-side component for browser interactivity
+import { useState, useEffect } from 'react'; // Import React hooks for state management and side effects
+import Sidebar from '../components/Sidebar'; // Import navigation sidebar component
+import RecentInfractions from '../components/RecentInfractions'; // Import component to display recent infractions
+import InfractionHistory from '../components/InfractionHistory'; // Import component to display infraction history charts
+import FloatingActionButton from '../components/FloatingActionButton'; // Import floating action button for quick actions
+import ReportFormModal from '../components/ReportFormModal'; // Import modal for creating/editing reports
+import ClearDatabaseModal from '../components/ClearDatabaseModal'; // Import modal for database clearing confirmation
+import { useReports } from '@/lib/hooks/useReports'; // Import custom hook for report data management
+import { MagnifyingGlassIcon, TrashIcon, FunnelIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'; // Import UI icons for dashboard actions
 
-export default function DashboardClient({ session }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [clearModalOpen, setClearModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    status: '',
-    interaction: '',
-    dateRange: 'all',
-    startDate: '',
-    endDate: ''
+export default function DashboardClient({ session }) { // Main dashboard component that receives user session data
+  const [modalOpen, setModalOpen] = useState(false); // Control report form modal visibility
+  const [clearModalOpen, setClearModalOpen] = useState(false); // Control database clear confirmation modal visibility
+  const [searchTerm, setSearchTerm] = useState(''); // Search term for filtering reports by student name, number, or notes
+  const [showFilters, setShowFilters] = useState(false); // Control advanced filter panel visibility
+  const [filters, setFilters] = useState({ // Object containing all filter criteria
+    status: '', // Filter by report status (RESOLVED/UNRESOLVED)
+    interaction: '', // Filter by interaction type
+    dateRange: 'all', // Filter by date range (today/week/month/custom)
+    startDate: '', // Custom date range start date
+    endDate: '' // Custom date range end date
   });
-  const { reports, refresh } = useReports();
+  const { reports, refresh } = useReports(); // Get reports data and refresh function from custom hook
 
   // Refresh reports when modal is closed
   useEffect(() => {
     if (!modalOpen) {
-      refresh();
+      refresh(); // Refresh reports data when modal closes to show latest changes
     }
   }, [modalOpen, refresh]);
 
-  const handleClearDatabase = async () => {
+  const handleClearDatabase = async () => { // Function to clear all data from the database
     try {
-      const response = await fetch('/api/reset', {
+      const response = await fetch('/api/reset', { // Send POST request to reset API endpoint
         method: 'POST',
       });
       
-      if (!response.ok) {
+      if (!response.ok) { // Check if the request was successful
         throw new Error('Failed to clear database');
       }
       
-      await refresh();
+      await refresh(); // Refresh the reports data after successful database clear
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error(error.message); // Re-throw error with message
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const handleFilterChange = (key, value) => { // Update specific filter value in the filters state object
+    setFilters(prev => ({ ...prev, [key]: value })); // Spread previous filters and update the specified key
   };
 
-  const clearFilters = () => {
+  const clearFilters = () => { // Reset all filters to their default empty values
     setFilters({
-      status: '',
-      interaction: '',
-      dateRange: 'all',
-      startDate: '',
-      endDate: ''
+      status: '', // Clear status filter
+      interaction: '', // Clear interaction type filter
+      dateRange: 'all', // Reset date range to 'all'
+      startDate: '', // Clear custom start date
+      endDate: '' // Clear custom end date
     });
   };
 
-  const handleExport = async () => {
+  const handleExport = async () => { // Function to export reports data as CSV file
     try {
-      const response = await fetch('/api/reports/export', {
+      const response = await fetch('/api/reports/export', { // Send GET request to export API endpoint
         method: 'GET',
       });
       
-      if (!response.ok) {
+      if (!response.ok) { // Check if the request was successful
         throw new Error('Failed to export reports');
       }
       
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `reports-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const blob = await response.blob(); // Get the CSV data as a blob
+      const url = window.URL.createObjectURL(blob); // Create a temporary URL for the blob
+      const a = document.createElement('a'); // Create a temporary anchor element for download
+      a.href = url; // Set the anchor's href to the blob URL
+      a.download = `reports-${new Date().toISOString().split('T')[0]}.csv`; // Set filename with current date
+      document.body.appendChild(a); // Add anchor to DOM temporarily
+      a.click(); // Trigger the download
+      window.URL.revokeObjectURL(url); // Clean up the blob URL
+      document.body.removeChild(a); // Remove the temporary anchor element
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export reports. Please try again.');
+      console.error('Export failed:', error); // Log error to console
+      alert('Failed to export reports. Please try again.'); // Show user-friendly error message
     }
   };
 
-  const filteredReports = reports.filter(report => {
+  const filteredReports = reports.filter(report => { // Filter reports based on search term and filter criteria
     // Search term filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      const studentName = report.studentName?.toLowerCase() || '';
-      const studentNumber = report.studentNumber?.toLowerCase() || '';
-      const notes = report.notes?.toLowerCase() || '';
-      const reporter = report.reportedBy?.toLowerCase() || '';
+    if (searchTerm) { // If search term exists, check if report matches
+      const searchLower = searchTerm.toLowerCase(); // Convert search term to lowercase for case-insensitive comparison
+      const studentName = report.studentName?.toLowerCase() || ''; // Get student name or empty string
+      const studentNumber = report.studentNumber?.toLowerCase() || ''; // Get student number or empty string
+      const notes = report.notes?.toLowerCase() || ''; // Get notes or empty string
+      const reporter = report.reportedBy?.toLowerCase() || ''; // Get reporter name or empty string
       
-      if (!studentName.includes(searchLower) &&
-          !studentNumber.includes(searchLower) &&
-          !notes.includes(searchLower) &&
-          !reporter.includes(searchLower)) {
-        return false;
+      if (!studentName.includes(searchLower) && // Check if student name contains search term
+          !studentNumber.includes(searchLower) && // Check if student number contains search term
+          !notes.includes(searchLower) && // Check if notes contain search term
+          !reporter.includes(searchLower)) { // Check if reporter name contains search term
+        return false; // Exclude report if no field matches search term
       }
     }
 
     // Status filter
-    if (filters.status && report.status !== filters.status) {
-      return false;
+    if (filters.status && report.status !== filters.status) { // If status filter is set and report status doesn't match
+      return false; // Exclude report
     }
 
     // Interaction type filter
-    if (filters.interaction && report.interaction !== filters.interaction) {
-      return false;
+    if (filters.interaction && report.interaction !== filters.interaction) { // If interaction filter is set and report interaction doesn't match
+      return false; // Exclude report
     }
 
     // Date range filter
-    if (filters.dateRange !== 'all') {
-      const reportDate = new Date(report.interactionTimestamp);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    if (filters.dateRange !== 'all') { // If date range filter is not set to 'all'
+      const reportDate = new Date(report.interactionTimestamp); // Convert report timestamp to Date object
+      const today = new Date(); // Get current date
+      today.setHours(0, 0, 0, 0); // Set time to start of day for accurate comparison
 
-      switch (filters.dateRange) {
-        case 'today':
-          const startOfDay = new Date(today);
-          if (reportDate < startOfDay) return false;
+      switch (filters.dateRange) { // Switch based on selected date range
+        case 'today': // Filter for reports from today only
+          const startOfDay = new Date(today); // Get start of current day
+          if (reportDate < startOfDay) return false; // Exclude if report is before today
           break;
-        case 'week':
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay());
-          if (reportDate < startOfWeek) return false;
+        case 'week': // Filter for reports from current week
+          const startOfWeek = new Date(today); // Get current date
+          startOfWeek.setDate(today.getDate() - today.getDay()); // Set to start of current week (Sunday)
+          if (reportDate < startOfWeek) return false; // Exclude if report is before this week
           break;
-        case 'month':
-          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          if (reportDate < startOfMonth) return false;
+        case 'month': // Filter for reports from current month
+          const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); // Get first day of current month
+          if (reportDate < startOfMonth) return false; // Exclude if report is before this month
           break;
-        case 'custom':
-          if (filters.startDate && new Date(report.interactionTimestamp) < new Date(filters.startDate)) {
-            return false;
+        case 'custom': // Filter for reports within custom date range
+          if (filters.startDate && new Date(report.interactionTimestamp) < new Date(filters.startDate)) { // Check if report is before start date
+            return false; // Exclude report
           }
-          if (filters.endDate && new Date(report.interactionTimestamp) > new Date(filters.endDate)) {
-            return false;
+          if (filters.endDate && new Date(report.interactionTimestamp) > new Date(filters.endDate)) { // Check if report is after end date
+            return false; // Exclude report
           }
           break;
       }
     }
 
-    return true;
+    return true; // Include report if it passes all filters
   });
 
   return (

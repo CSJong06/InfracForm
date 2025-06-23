@@ -1,23 +1,23 @@
-'use client';
+'use client'; // Mark component as client-side for Next.js
 
-import { useRouter } from 'next/navigation';
-import { useReports } from '@/lib/hooks/useReports';
-import ReportCard from './ReportCard';
+import { useRouter } from 'next/navigation'; // Import Next.js router for navigation
+import { useReports } from '@/lib/hooks/useReports'; // Import custom hook for report operations
+import ReportCard from './ReportCard'; // Import ReportCard component for displaying individual reports
 
-const formatValue = (value) => {
+const formatValue = (value) => { // Utility function to format enum values for display
   return value
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
+    .split('_') // Split string by underscores
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize first letter of each word
+    .join(' '); // Join words with spaces
 };
 
-export default function InfractionHistory({ reports: propReports }) {
-  const { reports: contextReports, loading, error } = useReports();
-  const reports = propReports || contextReports;
-  const router = useRouter();
+export default function InfractionHistory({ reports: propReports }) { // Component for displaying report history with optional prop override
+  const { reports: contextReports, loading, error } = useReports(); // Get reports data from context hook
+  const reports = propReports || contextReports; // Use prop reports if provided, otherwise use context reports
+  const router = useRouter(); // Get Next.js router instance for navigation
 
-  const handleEdit = (reportId) => {
-    router.push(`/reports/${reportId}/edit`);
+  const handleEdit = (reportId) => { // Event handler for edit button clicks
+    router.push(`/reports/${reportId}/edit`); // Navigate to edit page for specific report
   };
 
   if (loading) {

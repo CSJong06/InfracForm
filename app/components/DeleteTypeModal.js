@@ -1,37 +1,37 @@
-import { useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react'; // Import React useState hook for component state management
+import { XMarkIcon } from '@heroicons/react/24/outline'; // Import X mark icon for close button
 
-export default function DeleteTypeModal({ 
-  open, 
-  onClose, 
-  type = null, 
-  typeCategory,
-  onDelete 
+export default function DeleteTypeModal({ // Modal component for confirming deletion of form types
+  open, // Boolean prop to control modal visibility
+  onClose, // Function prop to close the modal
+  type = null, // Object containing type data to be deleted
+  typeCategory, // String indicating category of type (interaction, infraction, intervention)
+  onDelete // Function prop to call after successful deletion
 }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // State to track loading status during deletion
+  const [error, setError] = useState(''); // State to store error messages
 
-  const handleDelete = async () => {
-    setIsLoading(true);
-    setError('');
+  const handleDelete = async () => { // Async function to handle type deletion
+    setIsLoading(true); // Set loading state to true
+    setError(''); // Clear any previous errors
 
     try {
-      const endpoint = `/api/form-types/${typeCategory}-types?name=${encodeURIComponent(type.name)}`;
-      const response = await fetch(endpoint, {
-        method: 'DELETE',
+      const endpoint = `/api/form-types/${typeCategory}-types?name=${encodeURIComponent(type.name)}`; // Construct API endpoint with type name parameter
+      const response = await fetch(endpoint, { // Make DELETE request to API
+        method: 'DELETE', // Use DELETE HTTP method
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete type');
+      if (!response.ok) { // Check if request was successful
+        const data = await response.json(); // Parse error response
+        throw new Error(data.error || 'Failed to delete type'); // Throw error with message from server or default
       }
 
-      onDelete();
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Failed to delete type');
-    } finally {
-      setIsLoading(false);
+      onDelete(); // Call success callback function
+      onClose(); // Close the modal
+    } catch (err) { // Catch any errors during deletion process
+      setError(err.message || 'Failed to delete type'); // Set error message in state
+    } finally { // Always execute this block
+      setIsLoading(false); // Reset loading state to false
     }
   };
 

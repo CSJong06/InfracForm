@@ -1,47 +1,47 @@
-"use client";
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+"use client"; // Mark component as client-side for Next.js
+import { useState } from 'react'; // Import React useState hook for form state management
+import { useRouter, useSearchParams } from 'next/navigation'; // Import Next.js navigation hooks
 
-export default function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const from = searchParams.get('from') || '/dashboard';
+export default function LoginForm() { // Main login form component for user authentication
+  const [email, setEmail] = useState(''); // State for email input value
+  const [password, setPassword] = useState(''); // State for password input value
+  const [error, setError] = useState(''); // State to store authentication error messages
+  const [isLoading, setIsLoading] = useState(false); // State to track loading status during login
+  const router = useRouter(); // Get Next.js router instance for navigation
+  const searchParams = useSearchParams(); // Get URL search parameters for redirect handling
+  const from = searchParams.get('from') || '/dashboard'; // Get redirect destination or default to dashboard
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  const handleSubmit = async (e) => { // Async function to handle form submission
+    e.preventDefault(); // Prevent default form submission
+    setError(''); // Clear any previous errors
+    setIsLoading(true); // Set loading state to true
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch('/api/auth/login', { // Make login API request
+        method: 'POST', // Use POST method for login
+        headers: { // Set request headers
+          'Content-Type': 'application/json', // Specify JSON content type
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password }), // Send credentials as JSON
       });
 
-      const data = await response.json();
+      const data = await response.json(); // Parse response JSON
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to login');
+      if (!response.ok) { // Check if login was successful
+        throw new Error(data.error || 'Failed to login'); // Throw error with message from server or default
       }
 
       // Redirect to the original destination or dashboard
-      router.push(from);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+      router.push(from); // Navigate to intended destination after successful login
+    } catch (error) { // Catch any errors during login process
+      setError(error.message); // Set error message in state for display
+    } finally { // Always execute this block
+      setIsLoading(false); // Reset loading state to false
     }
   };
 
-  const handleGoogleLogin = () => {
-    router.push('/dashboard');
+  const handleGoogleLogin = () => { // Function to handle Google OAuth login (placeholder)
+    router.push('/dashboard'); // Navigate to dashboard (Google OAuth not implemented)
   };
 
   return (

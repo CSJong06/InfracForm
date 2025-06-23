@@ -182,7 +182,6 @@ export default function StudentsPage() {
       <StudentFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <BulkImportModal open={bulkImportOpen} onClose={() => setBulkImportOpen(false)} />
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirmOpen && studentToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirmOpen(false)} />

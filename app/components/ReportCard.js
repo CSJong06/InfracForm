@@ -80,60 +80,60 @@ const formatStatus = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 };
 
-export default function ReportCard({ report, variant = 'default' }) {
-  const router = useRouter();
-  const { refresh: refreshReports, deleteReport, updateReport } = useReports();
+export default function ReportCard({ report, variant = 'default' }) { // Main component for displaying individual report cards
+  const router = useRouter(); // Get Next.js router instance for navigation
+  const { refresh: refreshReports, deleteReport, updateReport } = useReports(); // Get report operations from custom hook
 
   // Determine the size and layout based on variant
-  const sizeClasses = {
-    default: 'p-3',
-    compact: 'p-2'
+  const sizeClasses = { // Object defining padding classes for different card sizes
+    default: 'p-3', // Default padding for standard cards
+    compact: 'p-2' // Reduced padding for compact cards
   };
 
-  const textClasses = {
-    default: {
-      title: 'text-base',
-      subtitle: 'text-xs',
-      content: 'text-xs',
-      footer: 'text-xs'
+  const textClasses = { // Object defining text size classes for different card variants
+    default: { // Text classes for default variant
+      title: 'text-base', // Title text size
+      subtitle: 'text-xs', // Subtitle text size
+      content: 'text-xs', // Content text size
+      footer: 'text-xs' // Footer text size
     },
-    compact: {
-      title: 'text-sm',
-      subtitle: 'text-[10px]',
-      content: 'text-[10px]',
-      footer: 'text-[10px]'
+    compact: { // Text classes for compact variant
+      title: 'text-sm', // Smaller title text
+      subtitle: 'text-[10px]', // Very small subtitle text
+      content: 'text-[10px]', // Very small content text
+      footer: 'text-[10px]' // Very small footer text
     }
   };
 
-  const statusColors = {
-    RESOLVED: 'bg-green-100 text-green-800',
-    UNRESOLVED: 'bg-yellow-100 text-yellow-800'
+  const statusColors = { // Object defining color classes for different status types
+    RESOLVED: 'bg-green-100 text-green-800', // Green colors for resolved status
+    UNRESOLVED: 'bg-yellow-100 text-yellow-800' // Yellow colors for unresolved status
   };
 
-  const handleEdit = (e) => {
-    e.preventDefault();
-    router.push(`/reports/${report.interactionID}/edit`);
+  const handleEdit = (e) => { // Event handler for edit button click
+    e.preventDefault(); // Prevent default button behavior
+    router.push(`/reports/${report.interactionID}/edit`); // Navigate to edit page for this report
   };
 
-  const handleReopen = async (e) => {
-    e.preventDefault();
+  const handleReopen = async (e) => { // Event handler for reopen button click
+    e.preventDefault(); // Prevent default button behavior
     try {
-      await updateReport(report.interactionID, {
-        ...report,
-        status: 'UNRESOLVED'
+      await updateReport(report.interactionID, { // Update report status to unresolved
+        ...report, // Spread existing report data
+        status: 'UNRESOLVED' // Change status to unresolved
       });
-    } catch (error) {
-      console.error('Error reopening report:', error);
+    } catch (error) { // Catch any errors during update
+      console.error('Error reopening report:', error); // Log error for debugging
     }
   };
 
-  const handleDelete = async (e) => {
-    e.preventDefault();
-    if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+  const handleDelete = async (e) => { // Event handler for delete button click
+    e.preventDefault(); // Prevent default button behavior
+    if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) { // Show confirmation dialog
       try {
-        await deleteReport(report.interactionID);
-      } catch (error) {
-        console.error('Error deleting report:', error);
+        await deleteReport(report.interactionID); // Delete the report from database
+      } catch (error) { // Catch any errors during deletion
+        console.error('Error deleting report:', error); // Log error for debugging
       }
     }
   };

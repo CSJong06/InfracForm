@@ -61,10 +61,8 @@ export default function BulkImportModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Dimmed background */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       
-      {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-auto p-6 z-10">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Bulk Import Students</h2>

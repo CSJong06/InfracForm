@@ -1,234 +1,233 @@
-import { useState, useRef, useEffect } from 'react';
-import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useTypes } from '@/lib/hooks/useTypes';
-import { useStudents } from '@/lib/hooks/useStudents';
-import { useReports } from '@/lib/hooks/useReports';
-import { DisplayToCodeMap, CodeToDisplayMap } from '@/lib/constants/interactionTypes';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react'; // Import React hooks for state management and side effects
+import { XMarkIcon, ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon, SparklesIcon, MagnifyingGlassIcon, TrashIcon } from '@heroicons/react/24/outline'; // Import UI icons for form elements
+import { useTypes } from '@/lib/hooks/useTypes'; // Import custom hook for form type data (interactions, infractions, interventions)
+import { useStudents } from '@/lib/hooks/useStudents'; // Import custom hook for student data management
+import { useReports } from '@/lib/hooks/useReports'; // Import custom hook for report operations
+import { DisplayToCodeMap, CodeToDisplayMap } from '@/lib/constants/interactionTypes'; // Import mapping constants for interaction type display
+import { useRouter } from 'next/navigation'; // Import Next.js router for navigation
 
-export default function ReportFormModal({ open, onClose, report = null }) {
-  const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes();
-  const { students = [], loading: studentsLoading, error: studentsError } = useStudents();
-  const { refresh: refreshReports, deleteReport } = useReports();
-  const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [formData, setFormData] = useState({
-    interaction: '',
-    infraction: '',
-    intervention: '',
-    notes: '',
-    interventionNotes: '',
-    interactionTimestamp: new Date().toISOString().slice(0, 16),
-    resolved: false,
-    showInterventionPrompt: false
+export default function ReportFormModal({ open, onClose, report = null }) { // Main form modal component with props for visibility, close handler, and optional report for editing
+  const { interactionTypes, infractionTypes, interventionTypes, loading: typesLoading, error: typesError } = useTypes(); // Get form type data with loading and error states
+  const { students = [], loading: studentsLoading, error: studentsError } = useStudents(); // Get student data with loading and error states
+  const { refresh: refreshReports, deleteReport } = useReports(); // Get report operations for refreshing and deleting
+  const router = useRouter(); // Get Next.js router instance for navigation
+  const [page, setPage] = useState(1); // Track current form page in multi-step form
+  const [formData, setFormData] = useState({ // Main form state object with all form fields
+    interaction: '', // Selected interaction type (e.g., 'INFRACTION', 'SHOUT_OUT')
+    infraction: '', // Selected infraction type (only for infraction interactions)
+    intervention: '', // Selected intervention type
+    notes: '', // General notes about the interaction
+    interventionNotes: '', // Specific notes about the intervention
+    interactionTimestamp: new Date().toISOString().slice(0, 16), // When the interaction occurred (datetime-local format)
+    resolved: false, // Whether the report should be marked as resolved
+    showInterventionPrompt: false // Whether to show intervention selection prompt
   });
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [showInterventionDropdown, setShowInterventionDropdown] = useState(false);
-  const [checkedInterventions, setCheckedInterventions] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const dropdownRef = useRef(null);
-  const [additionalComments, setAdditionalComments] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [session, setSession] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [summaryMessage, setSummaryMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState([]); // Array of selected students for the report
+  const [showInterventionDropdown, setShowInterventionDropdown] = useState(false); // Control intervention dropdown visibility
+  const [checkedInterventions, setCheckedInterventions] = useState([]); // Track which interventions are selected
+  const [searchTerm, setSearchTerm] = useState(''); // Search term for filtering students
+  const [showConfirmation, setShowConfirmation] = useState(false); // Control confirmation dialog visibility
+  const dropdownRef = useRef(null); // Reference to dropdown element for click-outside detection
+  const [additionalComments, setAdditionalComments] = useState(''); // Additional comments field
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track form submission state
+  const [error, setError] = useState(null); // Store form validation and submission errors
+  const [session, setSession] = useState(null); // Store current user session data
+  const [summary, setSummary] = useState(null); // Store AI-generated summary
+  const [summaryMessage, setSummaryMessage] = useState(''); // Message for AI summary generation
+  const [isLoading, setIsLoading] = useState(false); // Track AI loading state
+  const [aiResponse, setAiResponse] = useState(''); // Store AI response for summary generation
 
   useEffect(() => {
     // Fetch session data when component mounts
-    const fetchSession = async () => {
+    const fetchSession = async () => { // Async function to fetch current user session data
       try {
-        const response = await fetch('/api/auth/session');
-        if (response.ok) {
-          const data = await response.json();
-          setSession(data);
+        const response = await fetch('/api/auth/session'); // Make API request to get session information
+        if (response.ok) { // Check if the session request was successful
+          const data = await response.json(); // Parse the session data from JSON response
+          setSession(data); // Store session data in component state
         }
-      } catch (err) {
-        console.error('Failed to fetch session:', err);
+      } catch (err) { // Catch any errors during session fetching
+        console.error('Failed to fetch session:', err); // Log error for debugging
       }
     };
-    fetchSession();
-  }, []);
+    fetchSession(); // Execute the session fetching function
+  }, []); // Empty dependency array means this effect runs only once on mount
 
   // Initialize form data when editing an existing report
   useEffect(() => {
     // Only initialize if editing and formData.interaction is not set
-    if (
-      report &&
-      !typesLoading &&
-      interactionTypes.length > 0 &&
-      (!formData.interaction || formData.interaction === '')
+    if ( // Check if we're editing an existing report and have the necessary data
+      report && // Check if report prop exists (editing mode)
+      !typesLoading && // Check if form types have finished loading
+      interactionTypes.length > 0 && // Check if interaction types are available
+      (!formData.interaction || formData.interaction === '') // Check if form hasn't been initialized yet
     ) {
-      const interactionType = interactionTypes.find(t => t.name === report.interaction);
-      const newFormData = {
-        interaction: interactionType ? interactionType.name : '',
-        infraction: report.infraction || '',
-        intervention: report.intervention || '',
-        notes: report.notes || '',
-        interventionNotes: report.interventionNotes || '',
-        interactionTimestamp: report.interactionTimestamp ? new Date(report.interactionTimestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-        resolved: report.status === 'RESOLVED',
-        showInterventionPrompt: false
+      const interactionType = interactionTypes.find(t => t.name === report.interaction); // Find matching interaction type from loaded types
+      const newFormData = { // Create new form data object with report values
+        interaction: interactionType ? interactionType.name : '', // Set interaction type from report or empty string
+        infraction: report.infraction || '', // Set infraction type from report or empty string
+        intervention: report.intervention || '', // Set intervention type from report or empty string
+        notes: report.notes || '', // Set notes from report or empty string
+        interventionNotes: report.interventionNotes || '', // Set intervention notes from report or empty string
+        interactionTimestamp: report.interactionTimestamp ? new Date(report.interactionTimestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16), // Convert timestamp to datetime-local format
+        resolved: report.status === 'RESOLVED', // Set resolved flag based on report status
+        showInterventionPrompt: false // Reset intervention prompt visibility
       };
-      setFormData(newFormData);
-      if (report.studentNumber) {
-        const student = students.find(s => s.studentId === report.studentNumber);
-        if (student) {
-          setSelectedStudents([student]);
+      setFormData(newFormData); // Update form state with report data
+      if (report.studentNumber) { // Check if report has a student number
+        const student = students.find(s => s.studentId === report.studentNumber); // Find the student in the students array
+        if (student) { // Check if student was found
+          setSelectedStudents([student]); // Set the found student as selected
         }
       }
-      if (report.intervention && report.intervention !== 'NONE') {
-        setCheckedInterventions([report.intervention]);
+      if (report.intervention && report.intervention !== 'NONE') { // Check if report has a non-NONE intervention
+        setCheckedInterventions([report.intervention]); // Set the intervention as checked
       }
     }
-  }, [report, students, interactionTypes, typesLoading]);
+  }, [report, students, interactionTypes, typesLoading]); // Dependencies that trigger this effect when they change
 
   useEffect(() => {
-    if (formData.interaction === 'INFRACTION') {
-      setFormData(prev => ({
-        ...prev,
-        infraction: prev.infraction || 'NONE',
-        intervention: prev.intervention || 'NONE'
+    if (formData.interaction === 'INFRACTION') { // Check if selected interaction is an infraction
+      setFormData(prev => ({ // Update form data to set default values for infractions
+        ...prev, // Spread existing form data
+        infraction: prev.infraction || 'NONE', // Set infraction to current value or 'NONE' as default
+        intervention: prev.intervention || 'NONE' // Set intervention to current value or 'NONE' as default
       }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        infraction: 'NONE',
-        intervention: 'NONE'
+    } else { // If interaction is not an infraction (positive interaction)
+      setFormData(prev => ({ // Update form data to clear infraction-related fields
+        ...prev, // Spread existing form data
+        infraction: 'NONE', // Set infraction to 'NONE' for positive interactions
+        intervention: 'NONE' // Set intervention to 'NONE' for positive interactions
       }));
     }
-  }, [formData.interaction]);
+  }, [formData.interaction]); // Trigger effect when interaction type changes
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    console.log('handleChange - name:', name, 'value:', value);
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        [name]: value
+  const handleChange = (e) => { // Handle form input changes for all form fields
+    const { name, value } = e.target; // Extract field name and value from the event
+    console.log('handleChange - name:', name, 'value:', value); // Debug log to track form changes
+    setFormData(prev => { // Update form data state
+      const newData = { // Create new form data object
+        ...prev, // Spread existing form data
+        [name]: value // Update the specific field with new value
       };
-      console.log('Updated formData:', newData);
-      return newData;
+      console.log('Updated formData:', newData); // Debug log to show updated form data
+      return newData; // Return the updated form data
     });
   };
 
-  const handleStudentSelect = (student) => {
-    setSelectedStudents(prev =>
-      prev.includes(student)
-        ? prev.filter(s => s !== student)
-        : [...prev, student]
+  const handleStudentSelect = (student) => { // Handle student selection/deselection in multi-select
+    setSelectedStudents(prev => // Update selected students array
+      prev.includes(student) // Check if student is already selected
+        ? prev.filter(s => s !== student) // Remove student if already selected (toggle off)
+        : [...prev, student] // Add student if not selected (toggle on)
     );
   };
 
-  const handleNextPage = () => {
-    if (page === 1 && selectedStudents.length === 0) {
-      setError('Please select at least one student');
-      return;
+  const handleNextPage = () => { // Handle navigation to next page in multi-step form
+    if (page === 1 && selectedStudents.length === 0) { // Check if on page 1 and no students selected
+      setError('Please select at least one student'); // Set error message for validation
+      return; // Stop navigation if validation fails
     }
-    setError(null);
-    if (page === 2) {
-      if (formData.interaction === 'INFRACTION') {
+    setError(null); // Clear any existing errors
+    if (page === 2) { // Check if currently on page 2 (interaction details)
+      if (formData.interaction === 'INFRACTION') { // Check if selected interaction is an infraction
         // If it's an infraction, go directly to intervention page
-        setPage(3);
-      } else {
+        setPage(3); // Skip intervention prompt and go to intervention page
+      } else { // If interaction is not an infraction (positive interaction)
         // For non-infractions, show the intervention prompt
-        setFormData(prev => ({ ...prev, showInterventionPrompt: true }));
+        setFormData(prev => ({ ...prev, showInterventionPrompt: true })); // Show intervention prompt for positive interactions
       }
-    } else {
-      setPage(page + 1);
+    } else { // If not on page 2, proceed to next page normally
+      setPage(page + 1); // Increment page number
     }
   };
 
-  const handlePrevPage = () => {
-    setPage(prev => prev - 1);
+  const handlePrevPage = () => { // Handle navigation to previous page in multi-step form
+    setPage(prev => prev - 1); // Decrement page number
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setFormData(prev => ({ ...prev, showInterventionPrompt: true }));
+  const handleSubmit = (e) => { // Handle form submission (pre-confirmation)
+    e.preventDefault(); // Prevent default form submission behavior
+    setFormData(prev => ({ ...prev, showInterventionPrompt: true })); // Show intervention prompt before final submission
   };
 
-  const handleConfirmSubmit = async (isResolved) => {
+  const handleConfirmSubmit = async (isResolved) => { // Handle final form submission with resolution status
     try {
-      setError(null);
-      setIsSubmitting(true);
+      setError(null); // Clear any existing errors
+      setIsSubmitting(true); // Set submitting state to show loading indicator
 
-      if (!selectedStudents || selectedStudents.length === 0) {
-        throw new Error('No student selected');
+      if (!selectedStudents || selectedStudents.length === 0) { // Validate that at least one student is selected
+        throw new Error('No student selected'); // Throw error if no student selected
       }
 
       // Get the selected interaction type
-      const selectedInteraction = interactionTypes.find(t => t.name === formData.interaction);
-      if (!selectedInteraction) {
-        throw new Error('Invalid interaction type');
+      const selectedInteraction = interactionTypes.find(t => t.name === formData.interaction); // Find the selected interaction type object
+      if (!selectedInteraction) { // Check if interaction type was found
+        throw new Error('Invalid interaction type'); // Throw error if interaction type is invalid
       }
 
       // Prepare the report data
-      const reportData = {
-        studentNumber: selectedStudents[0].studentId,
-        submitterEmail: session.email,
-        interaction: selectedInteraction.name,
-        interactioncode: selectedInteraction.name,
-        notes: formData.notes,
-        interactionTimestamp: formData.interactionTimestamp,
-        status: isResolved ? 'RESOLVED' : 'UNRESOLVED',
-        entryTimestamp: new Date().toISOString(),
-        infraction: selectedInteraction.name === 'INFRACTION' ? (formData.infraction || 'NONE') : 'NONE',
-        intervention: formData.intervention || 'NONE',
-        interventionNotes: formData.interventionNotes || ''
+      const reportData = { // Create report data object for API submission
+        studentNumber: selectedStudents[0].studentId, // Use first selected student's ID
+        submitterEmail: session.email, // Use current user's email from session
+        interaction: selectedInteraction.name, // Set interaction type name
+        interactioncode: selectedInteraction.name, // Set interaction code (duplicate for consistency)
+        notes: formData.notes, // Set general notes about the interaction
+        interactionTimestamp: formData.interactionTimestamp, // Set when the interaction occurred
+        status: isResolved ? 'RESOLVED' : 'UNRESOLVED', // Set status based on resolution parameter
+        entryTimestamp: new Date().toISOString(), // Set current timestamp as entry time
+        infraction: selectedInteraction.name === 'INFRACTION' ? (formData.infraction || 'NONE') : 'NONE', // Set infraction type only for infractions
+        intervention: formData.intervention || 'NONE', // Set intervention type or default to 'NONE'
+        interventionNotes: formData.interventionNotes || '' // Set intervention-specific notes
       };
 
-      console.log('Debug - Final Report Data:', reportData);
+      console.log('Debug - Final Report Data:', reportData); // Debug log to show final report data
 
-      const response = await fetch('/api/reports', {
-        method: 'POST',
+      const response = await fetch('/api/reports', { // Make API request to create report
+        method: 'POST', // Use POST method for report creation
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', // Set content type to JSON
         },
-        body: JSON.stringify(reportData),
+        body: JSON.stringify(reportData), // Send report data as JSON string
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Server response error:', errorData);
-        throw new Error(errorData.error || 'Failed to create report');
+      if (!response.ok) { // Check if the API request was successful
+        const errorData = await response.json(); // Parse error response from server
+        console.error('Server response error:', errorData); // Log server error for debugging
+        throw new Error(errorData.error || 'Failed to create report'); // Throw error with server message or default
       }
 
-      const report = await response.json();
-      console.log('Report created successfully:', report);
-      resetForm();
-      onClose();
-      router.refresh();
-    } catch (err) {
-      console.error('Error creating report:', err);
-      setError(err.message || 'Failed to create report. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      const report = await response.json(); // Parse successful response to get created report data
+      console.log('Report created successfully:', report); // Log successful report creation
+      resetForm(); // Reset form to initial state after successful submission
+      onClose(); // Close the modal after successful submission
+      router.refresh(); // Refresh the page to show updated data
+    } catch (err) { // Catch any errors during report creation
+      console.error('Error creating report:', err); // Log error for debugging
+      setError(err.message || 'Failed to create report. Please try again.'); // Set error message for user display
+    } finally { // Always execute this block regardless of success or failure
+      setIsSubmitting(false); // Reset submitting state to hide loading indicator
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      interaction: '',
-      infraction: '',
-      intervention: '',
-      notes: '',
-      interventionNotes: '',
-      interactionTimestamp: new Date().toISOString().slice(0, 16),
-      resolved: false
+  const resetForm = () => { // Reset all form state to initial values
+    setFormData({ // Reset main form data to default values
+      interaction: '', // Clear interaction type selection
+      infraction: '', // Clear infraction type selection
+      intervention: '', // Clear intervention type selection
+      notes: '', // Clear general notes
+      interventionNotes: '', // Clear intervention-specific notes
+      interactionTimestamp: new Date().toISOString().slice(0, 16), // Reset to current date/time
+      resolved: false // Reset resolved status to false
     });
-    setSelectedStudents([]);
-    setError(null);
-    setPage(1);
-    setShowConfirmation(false);
-    setSummary(null);
+    setSelectedStudents([]); // Clear selected students array
+    setError(null); // Clear any error messages
+    setPage(1); // Reset to first page of multi-step form
+    setShowConfirmation(false); // Hide confirmation dialog
+    setSummary(null); // Clear AI-generated summary
   };
 
   const renderProgressDots = () => {
-    // Show 3 dots if we're on intervention page or if it's an infraction
     const totalDots = (page === 3 || formData.interaction === 'INFRACTION') ? 3 : 2;
     return (
       <div className="flex items-center gap-1.5">
@@ -245,99 +244,99 @@ export default function ReportFormModal({ open, onClose, report = null }) {
   };
 
   useEffect(() => {
-    if (!showInterventionDropdown) return;
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowInterventionDropdown(false);
+    if (!showInterventionDropdown) return; // Exit early if dropdown is not shown
+    function handleClickOutside(event) { // Function to handle clicks outside dropdown
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) { // Check if click is outside dropdown element
+        setShowInterventionDropdown(false); // Close dropdown if click is outside
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showInterventionDropdown]);
+    document.addEventListener('mousedown', handleClickOutside); // Add click listener to document
+    return () => document.removeEventListener('mousedown', handleClickOutside); // Clean up listener on unmount
+  }, [showInterventionDropdown]); // Re-run effect when dropdown visibility changes
 
-  const formatDisplayText = (text) => {
-    if (!text) return '';
+  const formatDisplayText = (text) => { // Format text for display by converting codes to readable text
+    if (!text) return ''; // Return empty string if text is falsy
     // Convert to lowercase and replace underscores with spaces
-    return text.toLowerCase()
-      .replace(/_/g, ' ')
+    return text.toLowerCase() // Convert text to lowercase
+      .replace(/_/g, ' ') // Replace underscores with spaces
       // Capitalize first letter of each word
-      .replace(/\b\w/g, l => l.toUpperCase());
+      .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize first letter of each word
   };
 
-  const formatInfractionText = (code) => {
-    const infractionMap = {
-      'CUT_CLASS': 'Cut class or >15min late',
-      'IMPROPER_LANGUAGE': 'Improper language or profanity',
-      'FAILURE_TO_MEET_EXPECTATIONS': 'Failure to meet classroom expectations',
-      'CELLPHONE': 'Cellphone',
-      'LEAVING_WITHOUT_PERMISSION': 'Leaving class without permission',
-      'MISUSE_OF_HALLPASS': 'Misuse of hallpass',
-      'TARDINESS': 'Tardiness to class',
-      'MINOR_VANDALISM': 'Minor vandalism',
-      'NONE': 'None'
+  const formatInfractionText = (code) => { // Format infraction codes to readable display text
+    const infractionMap = { // Map of infraction codes to display text
+      'CUT_CLASS': 'Cut class or >15min late', // Map cut class code to display text
+      'IMPROPER_LANGUAGE': 'Improper language or profanity', // Map improper language code to display text
+      'FAILURE_TO_MEET_EXPECTATIONS': 'Failure to meet classroom expectations', // Map expectations code to display text
+      'CELLPHONE': 'Cellphone', // Map cellphone code to display text
+      'LEAVING_WITHOUT_PERMISSION': 'Leaving class without permission', // Map leaving code to display text
+      'MISUSE_OF_HALLPASS': 'Misuse of hallpass', // Map hallpass code to display text
+      'TARDINESS': 'Tardiness to class', // Map tardiness code to display text
+      'MINOR_VANDALISM': 'Minor vandalism', // Map vandalism code to display text
+      'NONE': 'None' // Map none code to display text
     };
-    return infractionMap[code] || formatDisplayText(code);
+    return infractionMap[code] || formatDisplayText(code); // Return mapped text or fallback to generic formatting
   };
 
-  const formatInterventionText = (code) => {
-    return formatDisplayText(code);
+  const formatInterventionText = (code) => { // Format intervention codes to readable display text
+    return formatDisplayText(code); // Use generic formatting for intervention codes
   };
 
-  const handleDelete = async () => {
-    if (!report?.interactionID) return;
+  const handleDelete = async () => { // Handle report deletion with confirmation
+    if (!report?.interactionID) return; // Exit if no report ID available for deletion
     
-    if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) { // Show confirmation dialog
       try {
-        await deleteReport(report.interactionID);
-        onClose();
-      } catch (error) {
-        setError(error.message || 'Failed to delete report');
+        await deleteReport(report.interactionID); // Call delete function with report ID
+        onClose(); // Close modal after successful deletion
+      } catch (error) { // Catch any errors during deletion
+        setError(error.message || 'Failed to delete report'); // Set error message for user display
       }
     }
   };
 
-  const handleCancel = () => {
-    resetForm();
-    onClose();
+  const handleCancel = () => { // Handle form cancellation
+    resetForm(); // Reset form to initial state
+    onClose(); // Close the modal
   };
 
-  const handleGenerate = async () => {
-    if (selectedStudents.length === 0) {
-      setError('Please select a student first.');
-      return;
+  const handleGenerate = async () => { // Handle AI report generation
+    if (selectedStudents.length === 0) { // Check if a student is selected
+      setError('Please select a student first.'); // Set error if no student selected
+      return; // Exit early if no student selected
     }
-    setIsLoading(true);
-    const studentId = selectedStudents[0].studentId;
+    setIsLoading(true); // Set loading state for AI generation
+    const studentId = selectedStudents[0].studentId; // Get the first selected student's ID
     try {
       // First get the student summary
-      const response = await fetch(`/api/students/${studentId}/summary`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch student summary');
+      const response = await fetch(`/api/students/${studentId}/summary`); // Fetch student summary from API
+      if (!response.ok) { // Check if summary request was successful
+        throw new Error('Failed to fetch student summary'); // Throw error if summary fetch failed
       }
-      const data = await response.json();
-      setSummary(data);
-      const message = `You're writing a report about ${data.studentName}. This student has ${data.totalReports} reports made about them, and ${data.infractionCount} of them are infractions.${data.infractionCount > 0 ? ` These infractions consist of ${data.infractionTypes.join(', ')}.` : ''}`;
-      setSummaryMessage(message);
+      const data = await response.json(); // Parse summary data from response
+      setSummary(data); // Store summary data in component state
+      const message = `You're writing a report about ${data.studentName}. This student has ${data.totalReports} reports made about them, and ${data.infractionCount} of them are infractions.${data.infractionCount > 0 ? ` These infractions consist of ${data.infractionTypes.join(', ')}.` : ''}`; // Create context message for AI
+      setSummaryMessage(message); // Store context message in component state
 
       // Now send to AI for processing
-      const aiResponse = await fetch('/api/ai/process', {
-        method: 'POST',
+      const aiResponse = await fetch('/api/ai/process', { // Send context to AI for processing
+        method: 'POST', // Use POST method for AI processing
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', // Set content type to JSON
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message }), // Send context message to AI
       });
 
-      if (!aiResponse.ok) {
-        throw new Error('Failed to get AI response');
+      if (!aiResponse.ok) { // Check if AI request was successful
+        throw new Error('Failed to get AI response'); // Throw error if AI request failed
       }
 
-      const aiData = await aiResponse.json();
-      setAiResponse(aiData.response);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      const aiData = await aiResponse.json(); // Parse AI response data
+      setAiResponse(aiData.response); // Store AI response in component state
+    } catch (err) { // Catch any errors during AI generation
+      setError(err.message); // Set error message for user display
+    } finally { // Always execute this block
+      setIsLoading(false); // Reset loading state regardless of success or failure
     }
   };
 
@@ -383,9 +382,7 @@ export default function ReportFormModal({ open, onClose, report = null }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Dimmed background */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      {/* Modal */}
       <div className="relative bg-white rounded-xl shadow-xl w-full max-w-xl mx-auto p-6 z-10 flex flex-col gap-4 max-h-[90vh] min-h-[600px] overflow-y-auto custom-scrollbar">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800">

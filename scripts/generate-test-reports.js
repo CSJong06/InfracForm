@@ -95,114 +95,114 @@ const notes = [
   'Counseling session completed successfully.'
 ];
 
-function generateRandomDate(start, end) {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+function generateRandomDate(start, end) { // Generate a random date between start and end dates
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime())); // Use Math.random to get random timestamp within range
 }
 
-function getRandomInteraction() {
-  return interactionTypes[Math.floor(Math.random() * interactionTypes.length)];
+function getRandomInteraction() { // Get a random interaction type from the predefined list
+  return interactionTypes[Math.floor(Math.random() * interactionTypes.length)]; // Use Math.random to select random index from array
 }
 
-function getRandomInfraction() {
-  const codes = Object.keys(infractionTypes);
-  return codes[Math.floor(Math.random() * codes.length)];
+function getRandomInfraction() { // Get a random infraction type from the predefined object
+  const codes = Object.keys(infractionTypes); // Extract all infraction codes as an array
+  return codes[Math.floor(Math.random() * codes.length)]; // Use Math.random to select random infraction code
 }
 
-function getRandomIntervention() {
-  return interventionTypes[Math.floor(Math.random() * interventionTypes.length)];
+function getRandomIntervention() { // Get a random intervention type from the predefined list
+  return interventionTypes[Math.floor(Math.random() * interventionTypes.length)]; // Use Math.random to select random index from array
 }
 
-async function ensureInteractionTypes() {
+async function ensureInteractionTypes() { // Ensure all required interaction types exist in the database
   // Create interaction types if they don't exist
-  for (const type of interactionTypes) {
-    await InteractionType.findOneAndUpdate(
-      { name: type },
+  for (const type of interactionTypes) { // Iterate through all predefined interaction types
+    await InteractionType.findOneAndUpdate( // Use findOneAndUpdate with upsert to create or update interaction type
+      { name: type }, // Search by interaction type name
       { 
-        name: type,
-        displayName: type.replace(/_/g, ' '),
-        isActive: true,
-        createdBy: 'system',
-        updatedBy: 'system'
+        name: type, // Set the interaction type name
+        displayName: type.replace(/_/g, ' '), // Convert underscores to spaces for display name
+        isActive: true, // Mark interaction type as active
+        createdBy: 'system', // Set creator as system for test data
+        updatedBy: 'system' // Set updater as system for test data
       },
-      { upsert: true }
+      { upsert: true } // Create new document if it doesn't exist, update if it does
     );
   }
 }
 
-async function getActiveStudents() {
-  const students = await Student.find({ isActive: true });
-  if (students.length === 0) {
-    throw new Error('No active students found in the database. Please add some students first.');
+async function getActiveStudents() { // Fetch all active students from the database for test report generation
+  const students = await Student.find({ isActive: true }); // Query database for students with isActive flag set to true
+  if (students.length === 0) { // Check if no active students were found
+    throw new Error('No active students found in the database. Please add some students first.'); // Throw descriptive error message
   }
-  return students;
+  return students; // Return array of active students
 }
 
-async function generateTestReports(students) {
-  const reports = [];
-  const startDate = new Date(2024, 0, 1); // January 1, 2024
-  const endDate = new Date(); // Current date
+async function generateTestReports(students) { // Generate test report data using provided students
+  const reports = []; // Initialize empty array to store generated reports
+  const startDate = new Date(2024, 0, 1); // Set start date to January 1, 2024 (month is 0-indexed)
+  const endDate = new Date(); // Set end date to current date
 
-  for (let i = 0; i < 15; i++) {
-    const interactionTimestamp = generateRandomDate(startDate, endDate);
-    const entryTimestamp = new Date(interactionTimestamp.getTime() + Math.random() * 3600000); // Within 1 hour
-    const isInfraction = Math.random() > 0.5;
-    const interactionCode = isInfraction ? 'INFRACTION' : getRandomInteraction();
+  for (let i = 0; i < 15; i++) { // Generate 15 test reports
+    const interactionTimestamp = generateRandomDate(startDate, endDate); // Generate random interaction timestamp
+    const entryTimestamp = new Date(interactionTimestamp.getTime() + Math.random() * 3600000); // Entry timestamp within 1 hour of interaction
+    const isInfraction = Math.random() > 0.5; // 50% chance of generating an infraction vs positive interaction
+    const interactionCode = isInfraction ? 'INFRACTION' : getRandomInteraction(); // Set interaction code based on infraction flag
     
     // Select a random student from the active students
-    const randomStudent = students[Math.floor(Math.random() * students.length)];
+    const randomStudent = students[Math.floor(Math.random() * students.length)]; // Pick random student from available students
     
-    const report = {
-      studentNumber: randomStudent.studentId,
-      entryTimestamp,
-      submitterEmail: submitterEmails[Math.floor(Math.random() * submitterEmails.length)],
-      interaction: interactionCode,
-      interactioncode: interactionCode,
-      infraction: isInfraction ? getRandomInfraction() : 'NONE',
-      intervention: isInfraction ? getRandomIntervention() : 'NONE',
-      notes: notes[Math.floor(Math.random() * notes.length)],
-      interactionTimestamp,
-      status: Math.random() > 0.5 ? 'RESOLVED' : 'UNRESOLVED',
-      interactionID: uuidv4()
+    const report = { // Create report object with generated data
+      studentNumber: randomStudent.studentId, // Use selected student's ID
+      entryTimestamp, // Use generated entry timestamp
+      submitterEmail: submitterEmails[Math.floor(Math.random() * submitterEmails.length)], // Pick random submitter email
+      interaction: interactionCode, // Set interaction type
+      interactioncode: interactionCode, // Set interaction code (duplicate for consistency)
+      infraction: isInfraction ? getRandomInfraction() : 'NONE', // Set infraction type or 'NONE' for positive interactions
+      intervention: isInfraction ? getRandomIntervention() : 'NONE', // Set intervention type or 'NONE' for positive interactions
+      notes: notes[Math.floor(Math.random() * notes.length)], // Pick random note from predefined list
+      interactionTimestamp, // Use generated interaction timestamp
+      status: Math.random() > 0.5 ? 'RESOLVED' : 'UNRESOLVED', // 50% chance of resolved vs unresolved status
+      interactionID: uuidv4() // Generate unique interaction ID using UUID
     };
 
-    reports.push(report);
+    reports.push(report); // Add generated report to reports array
   }
 
-  return reports;
+  return reports; // Return array of generated test reports
 }
 
-async function main() {
+async function main() { // Main execution function for the test data generation script
   try {
-    console.log('Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.log('Connecting to MongoDB...'); // Log connection attempt
+    await mongoose.connect(process.env.MONGODB_URI); // Connect to MongoDB using environment variable
+    console.log('Connected to MongoDB'); // Log successful connection
 
     // Ensure interaction types exist
-    console.log('Ensuring interaction types exist...');
-    await ensureInteractionTypes();
-    console.log('Interaction types verified');
+    console.log('Ensuring interaction types exist...'); // Log interaction type verification start
+    await ensureInteractionTypes(); // Create or update all required interaction types in database
+    console.log('Interaction types verified'); // Log successful interaction type verification
 
     // Get active students
-    console.log('Fetching active students...');
-    const students = await getActiveStudents();
-    console.log(`Found ${students.length} active students`);
+    console.log('Fetching active students...'); // Log student fetching start
+    const students = await getActiveStudents(); // Fetch all active students from database
+    console.log(`Found ${students.length} active students`); // Log number of active students found
 
     // Clear existing reports
-    await Report.deleteMany({});
-    console.log('Cleared existing reports');
+    await Report.deleteMany({}); // Remove all existing reports from database
+    console.log('Cleared existing reports'); // Log successful report clearing
 
     // Generate and insert test reports
-    const testReports = await generateTestReports(students);
-    await Report.insertMany(testReports);
-    console.log('Inserted 15 test reports');
+    const testReports = await generateTestReports(students); // Generate test report data using active students
+    await Report.insertMany(testReports); // Insert all generated reports into database in bulk
+    console.log('Inserted 15 test reports'); // Log successful report insertion
 
-    await mongoose.disconnect();
-    console.log('Disconnected from MongoDB');
-    process.exit(0);
-  } catch (error) {
-    console.error('Error:', error);
-    process.exit(1);
+    await mongoose.disconnect(); // Disconnect from MongoDB database
+    console.log('Disconnected from MongoDB'); // Log successful disconnection
+    process.exit(0); // Exit process with success code
+  } catch (error) { // Catch any errors during script execution
+    console.error('Error:', error); // Log error details to console
+    process.exit(1); // Exit process with error code
   }
 }
 
-main(); 
+main(); // Execute the main function to run the test data generation script 

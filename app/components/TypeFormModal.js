@@ -1,69 +1,69 @@
-import { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react'; // Import React hooks for state management and side effects
+import { XMarkIcon } from '@heroicons/react/24/outline'; // Import X mark icon for close button
 
-export default function TypeFormModal({ 
-  open, 
-  onClose, 
-  type = null, 
-  typeCategory, // 'interaction', 'infraction', or 'intervention'
-  onSave 
+export default function TypeFormModal({ // Modal component for creating/editing form types (interactions, infractions, interventions)
+  open, // Boolean prop to control modal visibility
+  onClose, // Function prop to close the modal
+  type = null, // Object containing existing type data for editing (null for new types)
+  typeCategory, // String indicating category of type (interaction, infraction, or intervention)
+  onSave // Function prop to call after successful save
 }) {
-  const [formData, setFormData] = useState({
-    name: '',
-    displayName: '',
-    shorthandCode: '', // Added for interaction types
-    isActive: true
+  const [formData, setFormData] = useState({ // State for form input data
+    name: '', // Internal name used in system (uppercase with underscores)
+    displayName: '', // User-friendly name shown in interface
+    shorthandCode: '', // Short code for interaction types (max 3 characters)
+    isActive: true // Boolean flag for active/inactive status
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // State to track loading status during save
+  const [error, setError] = useState(''); // State to store error messages
 
-  useEffect(() => {
-    if (type) {
-      setFormData({
-        name: type.name,
-        displayName: type.displayName,
-        shorthandCode: type.shorthandCode || '', // Added for interaction types
-        isActive: type.isActive !== false
+  useEffect(() => { // Effect to populate form when editing existing type
+    if (type) { // If type object exists (editing mode)
+      setFormData({ // Set form data with existing type values
+        name: type.name, // Use existing name
+        displayName: type.displayName, // Use existing display name
+        shorthandCode: type.shorthandCode || '', // Use existing shorthand code or empty string
+        isActive: type.isActive !== false // Use existing active status (default to true if undefined)
       });
-    } else {
-      setFormData({
-        name: '',
-        displayName: '',
-        shorthandCode: '', // Added for interaction types
-        isActive: true
+    } else { // If no type object (creating new)
+      setFormData({ // Reset form data to default values
+        name: '', // Empty name
+        displayName: '', // Empty display name
+        shorthandCode: '', // Empty shorthand code
+        isActive: true // Default to active
       });
     }
-  }, [type]);
+  }, [type]); // Dependency on type prop
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+  const handleSubmit = async (e) => { // Async function to handle form submission
+    e.preventDefault(); // Prevent default form submission
+    setIsLoading(true); // Set loading state to true
+    setError(''); // Clear any previous errors
 
     try {
-      const endpoint = `/api/form-types/${typeCategory}-types`;
-      const method = type ? 'PUT' : 'POST';
+      const endpoint = `/api/form-types/${typeCategory}-types`; // Construct API endpoint based on type category
+      const method = type ? 'PUT' : 'POST'; // Use PUT for editing, POST for creating
       
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(endpoint, { // Make API request
+        method, // Use determined HTTP method
+        headers: { // Set request headers
+          'Content-Type': 'application/json', // Specify JSON content type
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // Send form data as JSON
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to save type');
+      if (!response.ok) { // Check if request was successful
+        const data = await response.json(); // Parse error response
+        throw new Error(data.error || 'Failed to save type'); // Throw error with message from server or default
       }
 
-      const savedType = await response.json();
-      onSave(savedType);
-      onClose();
-    } catch (err) {
-      setError(err.message || 'Failed to save type');
-    } finally {
-      setIsLoading(false);
+      const savedType = await response.json(); // Parse successful response
+      onSave(savedType); // Call success callback with saved type data
+      onClose(); // Close the modal
+    } catch (err) { // Catch any errors during save process
+      setError(err.message || 'Failed to save type'); // Set error message in state
+    } finally { // Always execute this block
+      setIsLoading(false); // Reset loading state to false
     }
   };
 

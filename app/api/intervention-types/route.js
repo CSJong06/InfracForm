@@ -69,8 +69,8 @@ export async function POST(request) {
     
     const interventionType = new InterventionType({
       ...data,
-      createdBy: 'system', // TODO: Replace with actual user
-      updatedBy: 'system'  // TODO: Replace with actual user
+      createdBy: data.createdBy || 'system',
+      updatedBy: data.updatedBy || 'system'
     });
     
     await interventionType.save();
@@ -90,20 +90,20 @@ export async function PUT(request) {
     const data = await request.json();
     const { _id, ...updateData } = data;
     
-    const interventionType = await InterventionType.findByIdAndUpdate(
+    const updatedType = await InterventionType.findByIdAndUpdate(
       _id,
-      { ...updateData, updatedBy: 'system' }, // TODO: Replace with actual user
-      { new: true }
+      { ...updateData, updatedBy: updateData.updatedBy || 'system' },
+      { new: true, runValidators: true }
     );
     
-    if (!interventionType) {
+    if (!updatedType) {
       return NextResponse.json(
         { error: 'Intervention type not found' },
         { status: 404 }
       );
     }
     
-    return NextResponse.json(interventionType);
+    return NextResponse.json(updatedType);
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to update intervention type' },
@@ -119,20 +119,20 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
-    const interventionType = await InterventionType.findByIdAndUpdate(
+    const updatedType = await InterventionType.findByIdAndUpdate(
       id,
-      { isActive: false, updatedBy: 'system' }, // TODO: Replace with actual user
+      { isActive: false, updatedBy: data.updatedBy || 'system' },
       { new: true }
     );
     
-    if (!interventionType) {
+    if (!updatedType) {
       return NextResponse.json(
         { error: 'Intervention type not found' },
         { status: 404 }
       );
     }
     
-    return NextResponse.json(interventionType);
+    return NextResponse.json(updatedType);
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to delete intervention type' },
