@@ -314,7 +314,7 @@ Manages student data with similar caching and update patterns.
 
 **Required:**
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/infracform
+MONGODB_URI=
 JWT_SECRET=your-super-secret-jwt-key
 ```
 
