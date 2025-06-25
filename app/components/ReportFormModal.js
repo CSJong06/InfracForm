@@ -605,7 +605,10 @@ export default function ReportFormModal({ open, onClose, report = null }) { // M
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
-                    className="w-fit bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-semibold shadow text-sm flex items-center gap-2"
+                    className="w-fit text-white px-6 py-2 rounded font-semibold shadow text-sm flex items-center gap-2"
+                    style={{ background: 'var(--primary-green)' }}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--accent-green)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'var(--primary-green)'}
                     onClick={handleGenerate}
                   >
                     <SparklesIcon className="w-5 h-5" />
@@ -685,14 +688,20 @@ export default function ReportFormModal({ open, onClose, report = null }) { // M
                   Cancel
                 </button>
                 <button
-                  className="px-6 py-2 rounded bg-green-600 hover:bg-green-700 text-white font-medium text-sm min-w-[120px] disabled:opacity-50"
+                  className="px-6 py-2 rounded text-white font-medium text-sm min-w-[120px] disabled:opacity-50"
+                  style={{ background: 'var(--primary-green)' }}
+                  onMouseOver={e => e.currentTarget.style.background = 'var(--accent-green)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'var(--primary-green)'}
                   onClick={() => handleConfirmSubmit(true)}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Submitting...' : 'Resolve'}
                 </button>
                 <button
-                  className="px-6 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm min-w-[120px] disabled:opacity-50"
+                  className="px-6 py-2 rounded text-white font-medium text-sm min-w-[120px] disabled:opacity-50"
+                  style={{ background: 'var(--primary-orange)' }}
+                  onMouseOver={e => e.currentTarget.style.background = 'var(--accent-orange)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'var(--primary-orange)'}
                   onClick={() => handleConfirmSubmit(false)}
                   disabled={isSubmitting}
                 >

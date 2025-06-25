@@ -139,7 +139,8 @@ export default function ReportCard({ report, variant = 'default' }) { // Main co
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 ${sizeClasses[variant]}`}>
+    <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 ${sizeClasses[variant]}`}
+      style={{ color: 'var(--primary-gray)' }}>
       <div className="flex justify-between items-start mb-2">
         <div>
           <h3 className={`font-semibold ${textClasses[variant].title} text-gray-900`}>

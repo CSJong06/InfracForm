@@ -22,7 +22,7 @@ export default function InfractionHistory({ reports: propReports }) { // Compone
 
   if (loading) {
     return (
-      <section className="bg-white/80 rounded-2xl shadow-md p-6">
+      <section className="bg-white/80 rounded-2xl shadow-md p-6" style={{ color: 'var(--primary-gray)' }}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
         </div>
@@ -39,7 +39,7 @@ export default function InfractionHistory({ reports: propReports }) { // Compone
 
   if (error) {
     return (
-      <section className="bg-white/80 rounded-2xl shadow-md p-6">
+      <section className="bg-white/80 rounded-2xl shadow-md p-6" style={{ color: 'var(--primary-gray)' }}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
         </div>
@@ -51,7 +51,7 @@ export default function InfractionHistory({ reports: propReports }) { // Compone
   }
 
   return (
-    <section className="bg-white/80 rounded-2xl shadow-md p-6">
+    <section className="bg-white/80 rounded-2xl shadow-md p-6" style={{ color: 'var(--primary-gray)' }}>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Report History</h2>
       </div>

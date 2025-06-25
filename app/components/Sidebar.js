@@ -47,25 +47,34 @@ export default function Sidebar() { // Main sidebar navigation component
   };
 
   return (
-    <aside className="w-56 bg-white/90 border-r flex flex-col py-8 px-4 gap-2 shadow-lg z-10">
+    <aside className="w-56 bg-white/90 border-r flex flex-col py-8 px-4 gap-2 shadow-lg z-10" style={{ borderLeft: '6px solid var(--primary-green)' }}>
       <div className="mb-8 flex items-center gap-2 px-2">
-        <span className="inline-block w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">S</span>
-        <span className="text-xl font-bold tracking-tight text-gray-800">Dashboard</span>
+        <img src="/B21-Logo-Mark-Color-Best.png" alt="Building21 Logo" className="h-10 w-10 object-contain" />
+        <span className="text-xl font-bold tracking-tight text-gray-800">Building21</span>
       </div>
       <nav className="flex-1 flex flex-col gap-1">
         {navLinks.map((link) => {
           const isActive =
             (link.href === '/' && pathname === '/') ||
             (link.href !== '/' && pathname.startsWith(link.href));
+          let activeBg = 'var(--primary-cyan)';
+          let activeColor = 'white';
+          if (link.name === 'Unresolved' && isActive) {
+            activeBg = 'var(--primary-orange)';
+          } else if (link.name === 'Resolved' && isActive) {
+            activeBg = 'var(--primary-green)';
+          }
           return (
             <Link
               key={link.name}
               href={link.href}
               className={`flex items-center gap-3 py-2 px-3 rounded-lg transition-colors text-base font-medium ${
-                isActive
-                  ? 'bg-blue-100 text-blue-700 shadow'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600'
+                isActive ? 'shadow' : ''
               }`}
+              style={{
+                background: isActive ? activeBg : 'transparent',
+                color: isActive ? activeColor : 'var(--primary-gray)',
+              }}
             >
               <link.icon className="w-5 h-5" />
               {link.name}
