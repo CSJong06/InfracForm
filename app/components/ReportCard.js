@@ -172,20 +172,6 @@ export default function ReportCard({ report, variant = 'default' }) { // Main co
         </div>
         <div className="flex gap-2">
           <button
-            onClick={handleEdit}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Edit
-          </button>
-          {report.status === 'RESOLVED' && (
-            <button
-              onClick={handleReopen}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              Reopen
-            </button>
-          )}
-          <button
             onClick={handleDelete}
             className="text-red-600 hover:text-red-800"
           >
